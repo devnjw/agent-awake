@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 — 2026-10-08
+
+- Open the options menu below its button in screen coordinates to prevent
+  it collapsing into a one-row scrolling menu inside the compact popover.
+- Keep monitor replies and heartbeats running during menu tracking, so an
+  open menu cannot expire the monitor's lease.
+
 ## 0.2.0 — 2026-10-08
 
 - Optional battery operation via Only when plugged in in the options menu.

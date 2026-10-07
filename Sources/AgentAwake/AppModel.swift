@@ -112,7 +112,7 @@ import AgentAwakeCore
         process.standardOutput = outgoing
         process.standardError = FileHandle.standardError
         process.terminationHandler = { [weak self] process in
-            Task { @MainActor in
+            Self.onMainRunLoop {
                 guard let self, !self.stopping else { return }
                 let needsRecovery = process.terminationStatus != 2 && (self.enabled || self.status?.lidControlAccepted == true)
                 self.enabled = false
@@ -126,7 +126,7 @@ import AgentAwakeCore
         outgoing.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { handle.readabilityHandler = nil; return }
-            Task { @MainActor in self?.receive(data) }
+            Self.onMainRunLoop { self?.receive(data) }
         }
         do {
             try process.run()
@@ -138,11 +138,20 @@ import AgentAwakeCore
             lastReply = Date()
             activity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "AgentAwake guard heartbeat")
             let clock = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.tick() }
+                MainActor.assumeIsolated { self?.tick() }
             }
             RunLoop.main.add(clock, forMode: .common)
             timer = clock
         } catch { self.error = "Couldn't start monitor: \(error.localizedDescription)" }
+    }
+
+    // NSMenu tracks in a nested event loop that can defer main-queue Tasks.
+    // Deliver monitor replies in common modes, matching the heartbeat timer.
+    private nonisolated static func onMainRunLoop(_ action: @escaping @MainActor () -> Void) {
+        CFRunLoopPerformBlock(CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue) {
+            MainActor.assumeIsolated { action() }
+        }
+        CFRunLoopWakeUp(CFRunLoopGetMain())
     }
 
     private func receive(_ data: Data) {

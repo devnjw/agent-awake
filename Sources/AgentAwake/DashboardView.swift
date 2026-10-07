@@ -16,35 +16,8 @@ struct DashboardView: View {
                     .labelsHidden().toggleStyle(.switch).tint(accent)
                     .help(model.powerMode == .pluggedInOnly ? "Keep awake while plugged in" : "Keep awake on charger or battery")
                     .disabled(!model.enabled && !model.isReady)
-                Menu {
-                    Button("Turn off displays", action: turnOffDisplays)
-                    Divider()
-                    Toggle("Only when plugged in", isOn: Binding(
-                        get: { model.powerMode == .pluggedInOnly },
-                        set: { model.setPowerMode($0 ? .pluggedInOnly : .anyPower) }))
-                    Divider()
-                    Picker("Stop after", selection: Binding(get: { model.duration }, set: { model.setDuration($0) })) {
-                        Text("Until stopped").tag(0)
-                        Text("1 hour").tag(3600)
-                        Text("2 hours").tag(7200)
-                        Text("4 hours").tag(14400)
-                        Text("8 hours").tag(28800)
-                    }
-                    .pickerStyle(.inline)
-                    if model.enabled && model.duration > 0 {
-                        Text(model.durationLabel)
-                    }
-                    Divider()
-                    Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLogin($0) }))
-                    Divider()
-                    Button("About & help", action: showHelp)
-                    Button("Quit AgentAwake") { NSApp.terminate(nil) }.keyboardShortcut("q")
-                } label: {
-                    Image(systemName: "ellipsis").frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .accessibilityLabel("Options").help("Options")
+                OptionsButton(model: model, showHelp: showHelp, turnOffDisplays: turnOffDisplays)
+                    .frame(width: 24, height: 24)
             }
 
             if let error = model.error {

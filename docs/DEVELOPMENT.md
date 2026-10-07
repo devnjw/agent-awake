@@ -28,6 +28,11 @@ from an installed or running app.
 - `SessionGuard.swift`: a separate `--guard` process owns the power assertions.
 - `PowerController.swift`: IOKit calls and restoration.
 - `DashboardView.swift`: the panel and help window.
+- `OptionsButton.swift`: a borderless native menu button opens an NSMenu below
+  the button in screen coordinates. Menu contents are captured when opened and
+  are not rebuilt while tracking. Monitor replies use the main run loop's common
+  modes, and its common-mode timer sends heartbeats directly. Main-queue Tasks
+  can be deferred during the menu's nested tracking loop.
 
 The monitor acquires the public `PreventUserIdleSystemSleep` and supplementary
 legacy `PreventSystemSleep` assertions and calls root-domain selector
@@ -129,3 +134,4 @@ verify its Applications shortcut and identical app contents.
 - [Apple: system sleep assertions](https://developer.apple.com/documentation/iokit/kiopmassertiontypepreventsystemsleep)
 - [Apple XNU: root-domain user client](https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/RootDomainUserClient.cpp)
 - [Apple XNU: power and lid policy](https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/IOPMrootDomain.cpp)
+- [Apple: positioning an independent NSMenu](https://developer.apple.com/documentation/appkit/nsmenu/popup(positioning:at:in:))

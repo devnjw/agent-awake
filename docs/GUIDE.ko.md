@@ -30,7 +30,7 @@ macOS가 실행을 막으면 [Apple의 앱별 ‘Open Anyway’ 안내](https://
 따르세요. 조직에서 관리하는 Mac은 이를 제한할 수 있습니다.
 Gatekeeper 전체를 비활성화하지 마세요.
 
-ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnjw/agent-awake/releases/tag/v0.2.0)에서도 제공합니다.
+ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1)에서도 제공합니다.
 
 ## 내 Mac에서 확인하기
 
