@@ -122,3 +122,10 @@ with a different build under the same version.
 ZIP, verifies its signature and both architectures, checks the version and
 included license, runs read-only diagnostics, and mounts the DMG read-only to
 verify its Applications shortcut and identical app contents.
+
+## References
+
+- [Apple: idle sleep assertions and lid closure](https://developer.apple.com/documentation/iokit/kiopmassertiontypepreventuseridlesystemsleep)
+- [Apple: system sleep assertions](https://developer.apple.com/documentation/iokit/kiopmassertiontypepreventsystemsleep)
+- [Apple XNU: root-domain user client](https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/RootDomainUserClient.cpp)
+- [Apple XNU: power and lid policy](https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/IOPMrootDomain.cpp)
