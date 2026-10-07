@@ -7,6 +7,7 @@ import AgentAwakeCore
     @Published var status: GuardStatus?
     @Published var enabled = false
     @Published var duration = 0
+    @Published private(set) var powerMode = PowerMode(rawValue: UserDefaults.standard.string(forKey: "powerMode") ?? "") ?? .pluggedInOnly
     @Published var startedAt: Date?
     @Published var error: String?
     @Published var settingsError: String?
@@ -20,6 +21,7 @@ import AgentAwakeCore
     private var lastReply = Date()
     private var stopping = false
     private var activity: NSObjectProtocol?
+    private var displaySleepProcess: Process?
     var onStatusChange: (() -> Void)?
 
     var active: Bool { enabled && status?.active == true && error == nil }
@@ -61,6 +63,43 @@ import AgentAwakeCore
         }
     }
 
+    func setPowerMode(_ mode: PowerMode) {
+        powerMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: "powerMode")
+        // Reevaluate the current session without restarting its deadline.
+        send(GuardCommand("configure", powerMode: mode))
+    }
+
+    func turnOffDisplays(completion: @escaping (Bool) -> Void) {
+        guard displaySleepProcess == nil, !stopping else { return }
+        let process = Process()
+        let errors = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        process.arguments = ["displaysleepnow"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = errors
+        process.terminationHandler = { [weak self] process in
+            let message = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let succeeded = process.terminationStatus == 0 && message.isEmpty
+            Task { @MainActor in
+                guard let self else { return }
+                self.displaySleepProcess = nil
+                guard !self.stopping else { return }
+                if !succeeded { self.settingsError = "Couldn't turn off displays. \(message)" }
+                completion(succeeded)
+            }
+        }
+        do {
+            try process.run()
+            displaySleepProcess = process
+            try? errors.fileHandleForWriting.close()
+        } catch {
+            settingsError = "Couldn't turn off displays: \(error.localizedDescription)"
+            completion(false)
+        }
+    }
+
     func connect() {
         guard child == nil else { return }
         signal(SIGPIPE, SIG_IGN)
@@ -95,6 +134,7 @@ import AgentAwakeCore
             try incoming.fileHandleForReading.close()
             try outgoing.fileHandleForWriting.close()
             child = process; input = incoming.fileHandleForWriting; output = outgoing.fileHandleForReading
+            send(GuardCommand("configure", powerMode: powerMode))
             lastReply = Date()
             activity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "AgentAwake guard heartbeat")
             let clock = Timer(timeInterval: 1, repeats: true) { [weak self] _ in

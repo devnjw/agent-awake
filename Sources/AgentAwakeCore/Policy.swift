@@ -4,12 +4,17 @@ public enum PowerSource: String, Codable, Sendable {
     case ac, battery, unknown
 }
 
+public enum PowerMode: String, Codable, Sendable {
+    case pluggedInOnly, anyPower
+}
+
 public enum HoldReason: String, Codable, Sendable {
     case active, disabled, battery, unknownPower, thermal, expired, disconnected, unsupported, error
 }
 
 public struct SessionPolicy: Sendable {
     public var enabled = false
+    public var powerMode: PowerMode = .pluggedInOnly
     public var deadline: TimeInterval?
     public var lastHeartbeat: TimeInterval
     public let heartbeatTimeout: TimeInterval = 8
@@ -24,7 +29,7 @@ public struct SessionPolicy: Sendable {
         if hot { return .thermal }
         switch power {
         case .ac: return .active
-        case .battery: return .battery
+        case .battery: return powerMode == .anyPower ? .active : .battery
         case .unknown: return .unknownPower
         }
     }
@@ -33,9 +38,11 @@ public struct SessionPolicy: Sendable {
 public struct GuardCommand: Codable, Sendable {
     public var action: String
     public var seconds: TimeInterval?
-    public init(_ action: String, seconds: TimeInterval? = nil) {
+    public var powerMode: PowerMode?
+    public init(_ action: String, seconds: TimeInterval? = nil, powerMode: PowerMode? = nil) {
         self.action = action
         self.seconds = seconds
+        self.powerMode = powerMode
     }
 }
 

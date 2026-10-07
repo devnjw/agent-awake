@@ -21,16 +21,22 @@ from an installed or running app.
 - `Sources/AgentAwakeCore/Policy.swift`: pure power, thermal, deadline, and
   heartbeat rules, with unit tests.
 - `AppModel.swift`: UI state and line-delimited JSON communication with the monitor.
+  Saves the power mode in UserDefaults; `configure` updates an active monitor
+  without changing its deadline. Display sleep runs `/usr/bin/pmset displaysleepnow`
+  asynchronously, after dismissing the menu. It does not change power preferences,
+  enable Keep awake, or install an input monitor.
 - `SessionGuard.swift`: a separate `--guard` process owns the power assertions.
 - `PowerController.swift`: IOKit calls and restoration.
 - `DashboardView.swift`: the panel and help window.
 
-The monitor acquires the public `PreventUserIdleSystemSleep` and
-`PreventSystemSleep` assertions and calls root-domain selector
+The monitor acquires the public `PreventUserIdleSystemSleep` and supplementary
+legacy `PreventSystemSleep` assertions and calls root-domain selector
 `kPMSetClamshellSleepState` (12). The selector is private and can change with macOS
 updates. It is isolated in `PowerController.swift`.
 
-UI pipe closure, an 8-second heartbeat expiry, SIGTERM, power loss, excessive
+Charger-only is the default; battery operation is an explicit saved choice.
+Unknown power sources always pause. UI pipe closure, an 8-second heartbeat expiry,
+SIGTERM, a disallowed power source, excessive
 thermal pressure, and the session deadline release the request. A surviving UI
 attempts recovery if the monitor dies. Killing both processes prevents cleanup.
 The selector is shared with powerd and other sleep utilities; ownership cannot
@@ -50,11 +56,13 @@ make integration-test
 ```
 
 This briefly acquires real IOKit requests and checks stop, deadline, pipe EOF,
-heartbeat expiry, SIGTERM, duplicate-monitor rejection, and unchanged persistent
+power-mode changes without restarting a deadline, idle configuration, heartbeat
+expiry, SIGTERM, duplicate-monitor rejection, and unchanged persistent
 power preferences. It does not physically close the lid.
 
-Before a release, manually test a short closed-lid session, charger removal,
-reconnection, login startup, timer expiry, and quitting. Never manufacture thermal
+Before a release, manually test a short closed-lid session in both power modes,
+charger removal, reconnection, display sleep/input wake, login startup, timer expiry,
+and quitting. Never manufacture thermal
 pressure to test a pause.
 
 Validated during development on macOS 26.6.2 / Apple Silicon: policy tests,
@@ -66,6 +74,12 @@ For v0.1.0, the universal hardened-runtime Developer ID build also passed all
 six hardware scenarios. Both slices target macOS 14.0; Apple Silicon execution
 and Intel read-only diagnostics through Rosetta succeeded locally. Native Intel
 CI complements this; physical lid behavior on Intel is still a manual check.
+
+For v0.2.0, all six policy/protocol tests and eight real IOKit scenarios passed.
+The native menu's power-mode changes, saved preference, and login registration
+were checked. The display action produced display-off/display-on events in the
+macOS power log while the same session's assertions remained held. Physical
+closed-lid battery use and each external monitor/input setup still need testing.
 
 ## Package a release
 

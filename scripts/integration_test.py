@@ -24,8 +24,9 @@ class Guard:
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.buffer = b""
 
-    def send(self, action, seconds=None):
-        self.process.stdin.write((json.dumps({"action": action, "seconds": seconds}) + "\n").encode())
+    def send(self, action, seconds=None, power_mode=None):
+        self.process.stdin.write((json.dumps({"action": action, "seconds": seconds,
+                                             "powerMode": power_mode}) + "\n").encode())
         self.process.stdin.flush()
 
     def until(self, reason, timeout=5):
@@ -60,12 +61,17 @@ assert "AC Power" in pmset("-g", "batt"), "Connect AC before integration test"
 assert "AgentAwake" not in pmset("-g", "assertions"), "Stop the app session before testing"
 before = pmset("-g", "custom")
 results = []
-for scenario in ["stop", "deadline", "parent_eof", "heartbeat_timeout", "signal", "duplicate_guard"]:
+for scenario in ["stop", "deadline", "configure_deadline", "configure_idle", "parent_eof",
+                 "heartbeat_timeout", "signal", "duplicate_guard"]:
     guard = Guard()
     try:
         ready = guard.until("disabled")
         assert ready.get("lidClosed") is False, "Keep the lid open during tests"
-        guard.send("start", 1.5 if scenario == "deadline" else None)
+        if scenario == "configure_idle":
+            guard.send("configure", power_mode="anyPower")
+            idle = guard.until("disabled")
+            assert not idle["assertionHeld"] and not idle["lidControlAccepted"]
+        guard.send("start", 1.5 if scenario in ("deadline", "configure_deadline") else None)
         active = guard.until("active")
         assert active["assertionHeld"] and active["lidControlAccepted"], active
         assert "AgentAwake" in pmset("-g", "assertions")
@@ -73,7 +79,12 @@ for scenario in ["stop", "deadline", "parent_eof", "heartbeat_timeout", "signal"
             guard.send("stop")
             status = guard.until("disabled")
             assert not status["assertionHeld"] and not status["lidControlAccepted"]
-        elif scenario == "deadline":
+        elif scenario in ("deadline", "configure_deadline"):
+            if scenario == "configure_deadline":
+                guard.send("configure", power_mode="anyPower")
+                assert guard.until("active")["assertionHeld"]
+                guard.send("configure", power_mode="pluggedInOnly")
+                assert guard.until("active")["assertionHeld"]
             status = guard.until("expired")
             assert not status["assertionHeld"] and not status["lidControlAccepted"]
         elif scenario == "heartbeat_timeout":

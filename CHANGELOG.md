@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 — 2026-10-08
+
+- Optional battery operation via Only when plugged in in the options menu.
+  Charger-only remains the default; the choice is saved across launches.
+- Changing the power mode reevaluates the session without restarting its timer.
+- Turn off displays sleeps all connected screens; ordinary keyboard, mouse,
+  and trackpad input wakes them using macOS's existing behavior.
+- The primary panel stays a single Keep awake row.
+
 ## 0.1.0 — 2026-10-08
 
 Initial public preview.

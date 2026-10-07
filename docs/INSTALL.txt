@@ -4,7 +4,9 @@ AgentAwake — macOS 14 or later · Apple Silicon and Intel
 2. Open AgentAwake from Applications and eject this disk image.
 3. Connect your charger, click the lightning icon in the menu bar,
    and turn on Keep awake.
-4. Use the ⋯ menu to set Stop after or Launch at login.
+4. Use ⋯ for Turn off displays, Only when plugged in, Stop after, or Launch at login.
+   Uncheck Only when plugged in to allow battery operation (saved across launches).
+   Keyboard, mouse, or trackpad input wakes displays; Keep awake stays as you set it.
 
 Test a short session on your Mac before leaving a long job unattended.
 Use on a hard, ventilated surface. Do not put an awake Mac in a bag.
@@ -13,7 +15,9 @@ Use on a hard, ventilated surface. Do not put an awake Mac in a bag.
 1. AgentAwake.app을 Applications 폴더로 드래그합니다.
 2. Applications에서 앱을 실행하고 디스크 이미지를 추출합니다.
 3. 충전기를 연결하고 메뉴 막대의 번개 아이콘에서 Keep awake를 켭니다.
-4. ⋯ 메뉴에서 종료 시간과 로그인 실행을 설정합니다.
+4. ⋯ 메뉴에서 화면 끄기, 전원 조건, 종료 시간, 로그인 실행을 설정합니다.
+   Only when plugged in을 해제하면 배터리에서도 유지하며 이 설정은 저장됩니다.
+   키보드·마우스·트랙패드 입력으로 화면이 다시 켜집니다.
 
 긴 작업 전에 덮개를 잠깐 닫았다 열어 이 Mac에서 동작하는지 확인하세요.
 

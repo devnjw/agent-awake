@@ -4,6 +4,7 @@ import AppKit
 struct DashboardView: View {
     @ObservedObject var model: AppModel
     let showHelp: () -> Void
+    let turnOffDisplays: () -> Void
     private let accent = Color(red: 0.62, green: 0.61, blue: 0.98)
 
     var body: some View {
@@ -11,11 +12,17 @@ struct DashboardView: View {
             HStack(spacing: 12) {
                 Text("Keep awake").font(.system(size: 15, weight: .medium))
                 Spacer(minLength: 0)
-                Toggle("Keep awake while plugged in", isOn: Binding(get: { model.enabled }, set: { $0 ? model.start() : model.stop() }))
+                Toggle("Keep awake", isOn: Binding(get: { model.enabled }, set: { $0 ? model.start() : model.stop() }))
                     .labelsHidden().toggleStyle(.switch).tint(accent)
-                    .help("Keep awake while plugged in")
+                    .help(model.powerMode == .pluggedInOnly ? "Keep awake while plugged in" : "Keep awake on charger or battery")
                     .disabled(!model.enabled && !model.isReady)
                 Menu {
+                    Button("Turn off displays", action: turnOffDisplays)
+                    Divider()
+                    Toggle("Only when plugged in", isOn: Binding(
+                        get: { model.powerMode == .pluggedInOnly },
+                        set: { model.setPowerMode($0 ? .pluggedInOnly : .anyPower) }))
+                    Divider()
                     Picker("Stop after", selection: Binding(get: { model.duration }, set: { model.setDuration($0) })) {
                         Text("Until stopped").tag(0)
                         Text("1 hour").tag(3600)
@@ -52,7 +59,7 @@ struct DashboardView: View {
         }
         .padding(16).frame(width: 280)
         .fixedSize(horizontal: false, vertical: true)
-        .alert("Login setting", isPresented: Binding(get: { model.settingsError != nil }, set: { if !$0 { model.settingsError = nil } })) {
+        .alert("AgentAwake", isPresented: Binding(get: { model.settingsError != nil }, set: { if !$0 { model.settingsError = nil } })) {
             Button("OK") { model.settingsError = nil }
         } message: { Text(model.settingsError ?? "") }
     }
@@ -66,8 +73,9 @@ struct HelpView: View {
         VStack(alignment: .leading, spacing: 18) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Keep local work running with the lid closed. Turn on Keep awake, then connect your charger.")
-                    Text("Unplugging or high temperatures pause the session. It resumes when conditions allow. Quitting turns it off.")
+                    Text("Keep local work running with the lid closed. Turn on Keep awake. By default, a charger is required; uncheck Only when plugged in to allow battery use.")
+                    Text("Turn off displays sleeps all connected screens. Keyboard, mouse or trackpad input wakes them normally. Enable Keep awake to keep work running while screens are off.")
+                    Text("High temperatures or an unplugged charger in charger-only mode pause the session. It resumes when conditions allow. Quitting turns it off.")
                     Text("Use on a ventilated surface, never inside a bag.").foregroundStyle(.primary)
                     DisclosureGroup("Compatibility", isExpanded: $showCompatibility) {
                         VStack(alignment: .leading, spacing: 12) {
@@ -85,6 +93,6 @@ struct HelpView: View {
             }
         }
         .font(.system(size: 13)).foregroundStyle(.secondary)
-        .padding(24).frame(width: 380, height: showCompatibility ? 490 : 290)
+        .padding(24).frame(width: 380, height: showCompatibility ? 560 : 370)
     }
 }

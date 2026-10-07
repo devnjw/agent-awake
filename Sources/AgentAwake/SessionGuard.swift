@@ -4,7 +4,7 @@ import AgentAwakeCore
 import Darwin
 
 // An independent child owns all assertions and restores the lid flag on pipe EOF,
-// missed heartbeats, SIGTERM, power loss, timer expiry, or thermal pressure.
+// missed heartbeats, SIGTERM, disallowed power sources, expiry, or thermal pressure.
 // Nothing is installed as root, and no power-management preferences are written.
 final class SessionGuard {
     private let controller = PowerController()
@@ -68,6 +68,8 @@ final class SessionGuard {
             let now = ProcessInfo.processInfo.systemUptime
             policy.lastHeartbeat = now
             switch command.action {
+            case "configure":
+                if let mode = command.powerMode { policy.powerMode = mode }
             case "start":
                 policy.enabled = true
                 policy.deadline = command.seconds.flatMap { $0 > 0 && $0.isFinite ? now + $0 : nil }
@@ -86,7 +88,7 @@ final class SessionGuard {
             hot: snapshot.thermal >= ProcessInfo.ThermalState.serious.rawValue, hasLid: snapshot.lidClosed != nil)
         var message: String?
         do {
-            if reason == .active { try controller.acquire() }
+            if reason == .active { try controller.acquire(powerMode: policy.powerMode) }
             else { try controller.release() }
         } catch {
             reason = .error; message = error.localizedDescription; policy.enabled = false

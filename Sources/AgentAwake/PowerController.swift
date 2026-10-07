@@ -73,8 +73,9 @@ final class PowerController {
     private var baselineDisabled = false
     var assertionHeld: Bool { idleAssertion != 0 && systemAssertion != 0 }
 
-    func acquire() throws {
-        guard PowerSnapshot.read().source == .ac else { throw PowerError.unsupported }
+    func acquire(powerMode: PowerMode) throws {
+        let source = PowerSnapshot.read().source
+        guard source == .ac || (source == .battery && powerMode == .anyPower) else { throw PowerError.unsupported }
         guard rootBool("AppleClamshellState") != nil else { throw PowerError.unsupported }
         if connection == 0 {
             let root = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
@@ -86,12 +87,14 @@ final class PowerController {
         do {
             if idleAssertion == 0 {
                 try check(IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleSystemSleep as CFString,
-                    IOPMAssertionLevel(kIOPMAssertionLevelOn), "AgentAwake · plugged-in agent session" as CFString,
+                    IOPMAssertionLevel(kIOPMAssertionLevelOn), "AgentAwake · agent session" as CFString,
                     &idleAssertion), "Idle sleep assertion")
             }
             if systemAssertion == 0 {
+                // Legacy supplementary assertion. Idle sleep and lid control also
+                // apply on battery; this assertion alone does not override lid sleep.
                 try check(IOPMAssertionCreateWithName(kIOPMAssertionTypePreventSystemSleep as CFString,
-                    IOPMAssertionLevel(kIOPMAssertionLevelOn), "AgentAwake · AC power only" as CFString,
+                    IOPMAssertionLevel(kIOPMAssertionLevelOn), "AgentAwake · agent session" as CFString,
                     &systemAssertion), "System sleep assertion")
             }
             // Reapply while armed: powerd can reevaluate this shared flag on display changes.

@@ -37,7 +37,9 @@ import AgentAwakeCore
         statusItem.button?.action = #selector(togglePopover)
         updateStatusItem()
         model.onStatusChange = { [weak self] in self?.updateStatusItem() }
-        let hosting = NSHostingController(rootView: DashboardView(model: model, showHelp: { [weak self] in self?.showHelp() }))
+        let hosting = NSHostingController(rootView: DashboardView(model: model,
+            showHelp: { [weak self] in self?.showHelp() },
+            turnOffDisplays: { [weak self] in self?.turnOffDisplays() }))
         hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
         popover.behavior = .transient
@@ -77,6 +79,15 @@ import AgentAwakeCore
         }
         helpWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    private func turnOffDisplays() {
+        popover.performClose(nil)
+        // Let the menu dismiss and its mouse-up finish before sleeping displays.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.model.turnOffDisplays { [weak self] succeeded in
+                if !succeeded { self?.showPopover() }
+            }
+        }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         showPopover(); return true
