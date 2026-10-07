@@ -1,0 +1,9 @@
+.build/
+dist/
+.DS_Store
+.swiftpm/
+dist-package.*/
+*.p12
+*.p8
+.env
+.env.*

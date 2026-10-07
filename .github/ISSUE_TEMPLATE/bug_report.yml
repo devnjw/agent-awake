@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a problem with AgentAwake.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: AgentAwake version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac model and macOS version
+      placeholder: MacBook Pro M4, macOS 26.6.2
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Include steps to reproduce, power source, and external display setup.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnosis
+    attributes:
+      label: Read-only diagnostics (optional)
+      description: Run /Applications/AgentAwake.app/Contents/MacOS/AgentAwake --diagnose. Do not include agent content, credentials, or unrelated private logs.
+      render: text

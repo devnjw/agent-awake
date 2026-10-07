@@ -1,0 +1,28 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Test power policy
+        run: swift test
+      - name: Build app bundle
+        run: bash scripts/build.sh --output-dir dist/ci
+      - name: Verify bundle and read-only diagnostics
+        run: |
+          codesign --verify --strict dist/ci/AgentAwake.app
+          dist/ci/AgentAwake.app/Contents/MacOS/AgentAwake --diagnose
+      # IOKit integration tests require physical hardware; hosted VMs skip them.
