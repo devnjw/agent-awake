@@ -15,7 +15,7 @@ struct DashboardView: View {
                 Toggle("Keep awake", isOn: Binding(get: { model.enabled }, set: { $0 ? model.start() : model.stop() }))
                     .labelsHidden().toggleStyle(.switch).tint(accent)
                     .help(model.powerMode == .pluggedInOnly ? "Keep awake while plugged in" : "Keep awake on charger or battery")
-                    .disabled(!model.enabled && !model.isReady)
+                    .disabled(!model.enabled && !model.isReady && !model.canRetry)
                 OptionsButton(model: model, showHelp: showHelp, turnOffDisplays: turnOffDisplays)
                     .frame(width: 24, height: 24)
             }

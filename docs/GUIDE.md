@@ -31,7 +31,7 @@ the app, follow [Apple’s app-specific Open Anyway instructions](https://suppor
 Managed Macs may prohibit this. Do not disable Gatekeeper globally.
 
 A ZIP and SHA256 checksums are also available on the
-[release page](https://github.com/devnjw/agent-awake/releases/tag/v0.3.0).
+[release page](https://github.com/devnjw/agent-awake/releases/tag/v0.3.1).
 Current releases require Apple Silicon; Intel Macs can use the earlier
 [v0.2.1 universal preview](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1).
 
@@ -51,8 +51,9 @@ prompts, and errors in another app still need your attention.
 
 - **The switch is on, but work pauses:** check the power mode and pause message,
   then try the short lid test above.
-- **Monitor error:** quit and reopen AgentAwake. If both the UI and monitor were
-  forcibly killed and sleep stays abnormal, restart your Mac.
+- **Connection lost:** the app retries automatically and preserves the session
+  end time. If retries fail, toggle Keep awake to try again. If both the UI and
+  monitor were forcibly killed and sleep stays abnormal, restart your Mac.
 
 The app does not write persistent pmset settings. It has no server, analytics,
 agent-content access, privileged service, or input monitor.

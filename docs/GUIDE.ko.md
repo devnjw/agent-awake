@@ -30,7 +30,7 @@ macOS가 실행을 막으면 [Apple의 앱별 ‘Open Anyway’ 안내](https://
 따르세요. 조직에서 관리하는 Mac은 이를 제한할 수 있습니다.
 Gatekeeper 전체를 비활성화하지 마세요.
 
-ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnjw/agent-awake/releases/tag/v0.3.0)에서도 제공합니다.
+ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnjw/agent-awake/releases/tag/v0.3.1)에서도 제공합니다.
 현재 버전은 Apple Silicon 전용입니다. Intel Mac은 이전
 [v0.2.1 Universal 버전](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1)을 사용할 수 있습니다.
 
@@ -50,8 +50,9 @@ ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnj
 
 - **토글이 켜져 있는데 작업이 멈춰요:** 전원 조건과 일시 정지 안내를 확인하고,
   위의 짧은 덮개 시험을 해보세요.
-- **Monitor 오류가 나요:** 앱을 종료하고 다시 여세요. UI와 감시 프로세스를 동시에
-  강제 종료한 뒤 잠자기가 이상하면 Mac을 재시동하세요.
+- **연결 오류가 나요:** 종료 시간을 유지하며 자동으로 다시 연결합니다. 복구에 실패하면
+  Keep awake 토글로 다시 시도하세요. UI와 감시 프로세스를 동시에 강제 종료한 뒤
+  잠자기가 이상하면 Mac을 재시동하세요.
 
 영구 pmset 설정은 수정하지 않습니다. 서버·분석 수집·에이전트 내용 접근·관리자 서비스·입력 감시는 없습니다.
 

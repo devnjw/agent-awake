@@ -9,7 +9,8 @@ let package = Package(
         .target(name: "AgentAwakeCore"),
         .executableTarget(name: "AgentAwake", dependencies: ["AgentAwakeCore"],
                           linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("ServiceManagement")]),
-        .testTarget(name: "AgentAwakeCoreTests", dependencies: ["AgentAwakeCore"])
+        .testTarget(name: "AgentAwakeCoreTests", dependencies: ["AgentAwakeCore"]),
+        .testTarget(name: "AgentAwakeTests", dependencies: ["AgentAwake"])
     ],
     swiftLanguageModes: [.v5]
 )

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 — 2026-10-09
+
+- Use awake time and sleep/wake notifications for monitor health checks,
+  preventing a normal sleep interval from being treated as a response timeout.
+- Reconnect a stopped or unresponsive monitor automatically, with bounded retries.
+  Preserve the power mode and original session end time; a user stop cancels resume.
+- Allow another attempt with the Keep awake switch after recovery fails.
+- Ignore replies from retired monitors and restore sleep before replacing
+  an abnormally terminated monitor.
+
 ## 0.3.0 — 2026-10-09
 
 - Build and distribute Apple Silicon-only (arm64) apps, including the monitor.

@@ -28,6 +28,11 @@ executable. The bundle requires native execution and contains no Intel slice.
   without changing its deadline. Display sleep runs `/usr/bin/pmset displaysleepnow`
   asynchronously, after dismissing the menu. It does not change power preferences,
   enable Keep awake, or install an input monitor.
+  Health checks use system uptime, with workspace sleep/wake notifications.
+  EOF, missed replies, and process termination retire the old connection before
+  retrying up to three times with backoff. Stale callbacks are ignored by process
+  identity. Recovery reapplies the power mode and remaining session duration.
+  A user stop or elapsed deadline prevents automatic resume.
 - `SessionGuard.swift`: a separate `--guard` process owns the power assertions.
 - `PowerController.swift`: IOKit calls and restoration.
 - `DashboardView.swift`: the panel and help window.
@@ -53,9 +58,12 @@ No persistent `pmset` preferences are written.
 
 ## Validation
 
-`make test` runs pure policy tests, and CI builds on Apple Silicon and verifies
+`make test` runs policy and monitor-connection tests, and CI builds on Apple Silicon and verifies
 the app is arm64-only.
 Hosted VMs do not exercise physical lid control.
+Connection tests use pipe-connected fake monitors and an injected restore action;
+they do not change real power settings. They cover exit, timeout, bounded retries,
+manual retry, sleep/wake, original deadlines, cancellation, and failed restoration.
 
 For a real MacBook hardware smoke test, fully quit AgentAwake and other sleep
 utilities, connect AC power, keep the lid open, then run:
@@ -68,6 +76,11 @@ This briefly acquires real IOKit requests and checks stop, deadline, pipe EOF,
 power-mode changes without restarting a deadline, idle configuration, heartbeat
 expiry, SIGTERM, duplicate-monitor rejection, and unchanged persistent
 power preferences. It does not physically close the lid.
+
+To check automatic recovery, install the current build, connect AC, keep the lid
+open, enable Keep awake, and run `python3 scripts/recovery_smoke_test.py`.
+This briefly suspends the UI and kills its monitor, then verifies a replacement
+monitor holds the assertions while the same UI stays running.
 
 Before a release, manually test a short closed-lid session in both power modes,
 charger removal, reconnection, display sleep/input wake, login startup, timer expiry,
@@ -95,6 +108,12 @@ For v0.3.0, the arm64-only Developer ID package passed all six policy tests,
 eight real IOKit scenarios, and ZIP/DMG verification. The installed UI and monitor
 both reported ARM64 at runtime, with Keep awake active. Physical lid closure
 was not repeated for this packaging change.
+
+For v0.3.1, all 13 policy/connection tests, eight real IOKit scenarios, and
+ZIP/DMG verification passed. A ten-second UI suspension and a killed monitor
+both recovered without restarting the installed UI; Keep awake remained on.
+Sleep/wake was simulated in connection tests; physical sleep and lid closure
+were not forced during this verification.
 
 ## Package a release
 
