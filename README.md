@@ -2,9 +2,9 @@
 
 Keep Codex and other local agents running with your MacBook’s lid closed.
 
-**[Download for macOS](https://github.com/devnjw/agent-awake/releases/download/v0.2.1/AgentAwake-0.2.1-universal.dmg)** · [한국어](README.ko.md)
+**[Download for Apple Silicon](https://github.com/devnjw/agent-awake/releases/download/v0.3.0/AgentAwake-0.3.0-arm64.dmg)** · [한국어](README.ko.md)
 
-macOS 14+ · Apple Silicon & Intel
+macOS 14+ · Apple Silicon (M-series)
 
 ## Get started
 

@@ -9,9 +9,9 @@ the menu bar panel small; put secondary controls in the options menu. Preserve
 the AC-only and thermal rules, the independent monitor, and cleanup behavior.
 Do not add persistent system power changes or administrator helpers casually.
 
-CI exercises pure policy tests and native app builds on Apple Silicon and Intel.
+CI exercises pure policy tests and native arm64 app builds on Apple Silicon.
 Power-control changes also need the real-device tests described in
-[DEVELOPMENT.md](docs/DEVELOPMENT.md). An Intel build succeeding in CI does not
-confirm its physical lid behavior. Describe exactly what you tested.
+[DEVELOPMENT.md](docs/DEVELOPMENT.md). A build succeeding in CI does not
+confirm physical lid behavior. Describe exactly what you tested.
 
 Contributions are licensed under the project's [MIT license](LICENSE).

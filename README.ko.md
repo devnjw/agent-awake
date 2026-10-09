@@ -2,9 +2,9 @@
 
 MacBook 덮개를 닫아도 Codex와 로컬 에이전트 작업을 이어가세요.
 
-**[macOS 다운로드](https://github.com/devnjw/agent-awake/releases/download/v0.2.1/AgentAwake-0.2.1-universal.dmg)** · [English](README.md)
+**[Apple Silicon 다운로드](https://github.com/devnjw/agent-awake/releases/download/v0.3.0/AgentAwake-0.3.0-arm64.dmg)** · [English](README.md)
 
-macOS 14 이상 · Apple Silicon / Intel
+macOS 14 이상 · Apple Silicon (M 시리즈)
 
 ## 시작하기
 

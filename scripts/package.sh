@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds a universal app, a drag-to-install disk image, and a portable ZIP.
+# Builds an Apple Silicon app, a drag-to-install disk image, and a portable ZIP.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 TASK_ROOT="$(pwd)"
@@ -33,7 +33,7 @@ if result.get('status') != 'Accepted':
     raise SystemExit('Notarization was not accepted; release packaging stopped.')
 PY
 }
-bash scripts/build.sh --universal --output-dir "$STAGING/build"
+bash scripts/build.sh --output-dir "$STAGING/build"
 APP="$STAGING/build/AgentAwake.app"
 if [[ -n "$PROFILE" ]]; then
     ditto -c -k --sequesterRsrc --keepParent "$APP" "$STAGING/notarize.zip"
@@ -41,8 +41,8 @@ if [[ -n "$PROFILE" ]]; then
     xcrun stapler staple "$APP"
     xcrun stapler validate "$APP"
 fi
-ZIP="$ARTIFACT_DIR/AgentAwake-$APP_VERSION-universal.zip"
-DMG="$ARTIFACT_DIR/AgentAwake-$APP_VERSION-universal.dmg"
+ZIP="$ARTIFACT_DIR/AgentAwake-$APP_VERSION-arm64.zip"
+DMG="$ARTIFACT_DIR/AgentAwake-$APP_VERSION-arm64.dmg"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
 mkdir -p "$STAGING/volume"
 ditto "$APP" "$STAGING/volume/AgentAwake.app"

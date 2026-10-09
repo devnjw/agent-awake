@@ -1,4 +1,4 @@
-AgentAwake — macOS 14 or later · Apple Silicon and Intel
+AgentAwake — macOS 14 or later · Apple Silicon (M-series, arm64)
 
 1. Drag AgentAwake.app to Applications.
 2. Open AgentAwake from Applications and eject this disk image.

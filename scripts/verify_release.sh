@@ -15,17 +15,21 @@ cleanup() {
 }
 trap cleanup EXIT
 (cd "$ARTIFACT_DIR" && shasum -a 256 -c SHA256SUMS.txt)
-ditto -x -k "$ARTIFACT_DIR/AgentAwake-$APP_VERSION-universal.zip" "$STAGING/zip"
+ditto -x -k "$ARTIFACT_DIR/AgentAwake-$APP_VERSION-arm64.zip" "$STAGING/zip"
 APP="$STAGING/zip/AgentAwake.app"
 codesign --verify --strict "$APP"
-for architecture in arm64 x86_64; do
-    lipo "$APP/Contents/MacOS/AgentAwake" -verify_arch "$architecture"
-done
+test "$(lipo -archs "$APP/Contents/MacOS/AgentAwake")" == 'arm64'
+while IFS= read -r -d '' component; do
+    if [[ "$(file -b "$component")" == *Mach-O* ]]; then
+        test "$(lipo -archs "$component")" == 'arm64'
+    fi
+done < <(find "$APP" -type f -print0)
 test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")" == "$APP_VERSION"
 test "$(/usr/libexec/PlistBuddy -c 'Print LSMinimumSystemVersion' "$APP/Contents/Info.plist")" == '14.0'
+test "$(/usr/libexec/PlistBuddy -c 'Print LSRequiresNativeExecution' "$APP/Contents/Info.plist")" == 'true'
 cmp LICENSE "$APP/Contents/Resources/LICENSE.txt"
 "$APP/Contents/MacOS/AgentAwake" --diagnose
-DMG="$ARTIFACT_DIR/AgentAwake-$APP_VERSION-universal.dmg"
+DMG="$ARTIFACT_DIR/AgentAwake-$APP_VERSION-arm64.dmg"
 hdiutil verify "$DMG"
 mkdir -p "$MOUNT"
 hdiutil attach -readonly -nobrowse -mountpoint "$MOUNT" "$DMG" >/dev/null
@@ -35,4 +39,4 @@ test -f "$MOUNT/INSTALL.txt"
 cmp LICENSE "$MOUNT/LICENSE.txt"
 codesign --verify --strict "$MOUNT/AgentAwake.app"
 diff -qr "$APP" "$MOUNT/AgentAwake.app"
-printf 'Verified: checksums, universal ZIP, signature, version, license, DMG, and Applications shortcut.\n'
+printf 'Verified: checksums, arm64-only ZIP, signature, version, license, DMG, and Applications shortcut.\n'

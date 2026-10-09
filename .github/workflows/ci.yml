@@ -10,11 +10,7 @@ permissions:
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [macos-15, macos-15-intel]
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Test power policy
@@ -24,5 +20,6 @@ jobs:
       - name: Verify bundle and read-only diagnostics
         run: |
           codesign --verify --strict dist/ci/AgentAwake.app
+          test "$(lipo -archs dist/ci/AgentAwake.app/Contents/MacOS/AgentAwake)" = arm64
           dist/ci/AgentAwake.app/Contents/MacOS/AgentAwake --diagnose
       # IOKit integration tests require physical hardware; hosted VMs skip them.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-10-09
+
+- Build and distribute Apple Silicon-only (arm64) apps, including the monitor.
+  No Intel executable slice or Rosetta is required.
+- Require native execution and verify every bundled executable is arm64-only.
+- Update downloads, install instructions, and CI for Apple Silicon.
+  Intel Macs can use the earlier v0.2.1 universal preview.
+
 ## 0.2.1 — 2026-10-08
 
 - Open the options menu below its button in screen coordinates to prevent

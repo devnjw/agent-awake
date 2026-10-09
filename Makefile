@@ -11,5 +11,5 @@ package:
 
 # Requires a real MacBook, AC power, an open lid, and AgentAwake fully quit.
 integration-test:
-	swift build -c release
-	python3 scripts/integration_test.py
+	bash scripts/build.sh
+	AGENTAWAKE_BINARY="$(CURDIR)/dist/AgentAwake.app/Contents/MacOS/AgentAwake" python3 scripts/integration_test.py

@@ -1,7 +1,8 @@
 # Development and releases
 
-Requires macOS 14+, Xcode or Command Line Tools with Swift 6+, and Python 3
-for the optional hardware tests. The app has no external package dependencies.
+Requires an Apple Silicon Mac with macOS 14+, Xcode or Command Line Tools with
+Swift 6+, and Python 3 for the optional hardware tests. The app has no external
+package dependencies.
 
 ```sh
 git clone https://github.com/devnjw/agent-awake.git
@@ -15,6 +16,8 @@ open dist/AgentAwake.app
 login registration; running the raw Swift executable is not an app installation.
 Builds are ad hoc signed by default. `--output-dir` keeps staged builds separate
 from an installed or running app.
+App bundles always target arm64, including the monitor that runs from the same
+executable. The bundle requires native execution and contains no Intel slice.
 
 ## Architecture
 
@@ -50,7 +53,8 @@ No persistent `pmset` preferences are written.
 
 ## Validation
 
-`make test` runs pure policy tests, and CI builds on Apple Silicon and Intel.
+`make test` runs pure policy tests, and CI builds on Apple Silicon and verifies
+the app is arm64-only.
 Hosted VMs do not exercise physical lid control.
 
 For a real MacBook hardware smoke test, fully quit AgentAwake and other sleep
@@ -77,14 +81,20 @@ actual thermal pressure, and login after reboot remain manual checks.
 
 For v0.1.0, the universal hardened-runtime Developer ID build also passed all
 six hardware scenarios. Both slices target macOS 14.0; Apple Silicon execution
-and Intel read-only diagnostics through Rosetta succeeded locally. Native Intel
-CI complements this; physical lid behavior on Intel is still a manual check.
+and Intel read-only diagnostics through Rosetta succeeded locally. Intel CI also
+passed for the earlier universal releases; physical lid behavior on Intel was
+not verified. Releases from v0.3.0 onward support Apple Silicon only.
 
 For v0.2.0, all six policy/protocol tests and eight real IOKit scenarios passed.
 The native menu's power-mode changes, saved preference, and login registration
 were checked. The display action produced display-off/display-on events in the
 macOS power log while the same session's assertions remained held. Physical
 closed-lid battery use and each external monitor/input setup still need testing.
+
+For v0.3.0, the arm64-only Developer ID package passed all six policy tests,
+eight real IOKit scenarios, and ZIP/DMG verification. The installed UI and monitor
+both reported ARM64 at runtime, with Keep awake active. Physical lid closure
+was not repeated for this packaging change.
 
 ## Package a release
 
@@ -97,9 +107,9 @@ CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
   bash scripts/package.sh
 ```
 
-The script builds both architectures, combines them with `lipo`, signs the app
-with hardened runtime, and creates a ZIP, a signed DMG with an Applications
-shortcut, and `SHA256SUMS.txt` in `dist/releases/vVERSION/`.
+The script builds only arm64, signs the app with hardened runtime, and creates
+an `-arm64.zip`, a signed `-arm64.dmg` with an Applications shortcut, and
+`SHA256SUMS.txt` in `dist/releases/vVERSION/`.
 
 Without `CODESIGN_IDENTITY`, packages are ad hoc signed local previews. Do not
 describe them as Developer ID signed. Signing certificates, private keys, and
@@ -117,14 +127,14 @@ CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
 This submits and staples the app and DMG. Update the install instructions and
 release notes to state the actual notarization status before publishing.
 
-Inspect the ZIP and DMG, verify `codesign --verify --strict`, check both slices
-with `lipo -archs`, and run the app's read-only `--diagnose` command. Publish
-the version tag and all three files through GitHub Releases. Keep the source
+Inspect the ZIP and DMG, verify `codesign --verify --strict`, check that
+`lipo -archs` reports only `arm64`, and run the app's read-only `--diagnose` command.
+Publish the version tag and all three files through GitHub Releases. Keep the source
 tag and packaged source identical; do not overwrite an existing release's files
 with a different build under the same version.
 
 `bash scripts/verify_release.sh` checks the packaged checksums, extracts the
-ZIP, verifies its signature and both architectures, checks the version and
+ZIP, verifies its signature and arm64-only executables, checks the version and
 included license, runs read-only diagnostics, and mounts the DMG read-only to
 verify its Applications shortcut and identical app contents.
 
@@ -135,3 +145,4 @@ verify its Applications shortcut and identical app contents.
 - [Apple XNU: root-domain user client](https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/RootDomainUserClient.cpp)
 - [Apple XNU: power and lid policy](https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/IOPMrootDomain.cpp)
 - [Apple: positioning an independent NSMenu](https://developer.apple.com/documentation/appkit/nsmenu/popup(positioning:at:in:))
+- [Apple: requiring native execution](https://developer.apple.com/documentation/bundleresources/information-property-list/lsrequiresnativeexecution)

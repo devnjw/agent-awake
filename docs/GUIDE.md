@@ -31,7 +31,9 @@ the app, follow [Apple’s app-specific Open Anyway instructions](https://suppor
 Managed Macs may prohibit this. Do not disable Gatekeeper globally.
 
 A ZIP and SHA256 checksums are also available on the
-[release page](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1).
+[release page](https://github.com/devnjw/agent-awake/releases/tag/v0.3.0).
+Current releases require Apple Silicon; Intel Macs can use the earlier
+[v0.2.1 universal preview](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1).
 
 ## Check your Mac
 
