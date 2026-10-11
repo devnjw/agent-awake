@@ -8,6 +8,7 @@ import Darwin
 // Nothing is installed as root, and no power-management preferences are written.
 final class SessionGuard {
     private let controller = PowerController()
+    private let brightness = BuiltInDisplayBrightness.live()
     private var policy = SessionPolicy(now: ProcessInfo.processInfo.systemUptime)
     private var input = Data()
     private var timer: DispatchSourceTimer?
@@ -93,6 +94,13 @@ final class SessionGuard {
         } catch {
             reason = .error; message = error.localizedDescription; policy.enabled = false
         }
+        do {
+            try brightness.update(active: reason == .active && controller.assertionHeld,
+                lidClosed: snapshot.lidClosed)
+        } catch {
+            // A brightness failure must not stop an otherwise healthy agent session.
+            message = [message, error.localizedDescription].compactMap { $0 }.joined(separator: " ")
+        }
         if reason == .expired { policy.enabled = false }
         emit(GuardStatus(reason: reason, power: snapshot.source, battery: snapshot.battery,
             lidClosed: snapshot.lidClosed, lidControlAccepted: controller.lidControlAccepted,
@@ -112,12 +120,16 @@ final class SessionGuard {
         // Retry transient release failures before exiting. A failed restore is not hidden.
         for _ in 0..<3 {
             do {
-                try controller.release()
+                // Always release power assertions, even if brightness restoration fails.
+                var cleanupError: Error?
+                do { try brightness.restore() } catch { cleanupError = error }
+                do { try controller.release() } catch { cleanupError = error }
+                if let cleanupError { throw cleanupError }
                 if let activity { ProcessInfo.processInfo.endActivity(activity) }
                 exit(0)
             } catch { Thread.sleep(forTimeInterval: 0.1) }
         }
-        fputs("AgentAwake: lid state restoration failed. Restart the Mac to clear the transient override.\n", stderr)
+        fputs("AgentAwake: Power or brightness restoration failed. Check screen brightness; restart the Mac if the lid override remains active.\n", stderr)
         exit(3)
     }
 }
