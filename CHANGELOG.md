@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 — 2026-10-11
+
+- Open the options menu below and to the right of its button by default.
+- Keep the menu within the screen when space on the right is limited.
+
 ## 0.3.2 — 2026-10-11
 
 - Show all About & help content without a disclosure control or scrolling.

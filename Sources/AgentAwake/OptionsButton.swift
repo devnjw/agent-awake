@@ -48,7 +48,8 @@ struct OptionsButton: NSViewRepresentable {
                 let rect = window.convertToScreen(button.convert(button.bounds, to: nil))
                 let screen = window.screen?.visibleFrame ?? rect
                 let width = menu.size.width
-                let x = max(screen.minX + 8, min(rect.maxX - width, screen.maxX - width - 8))
+                // Open toward the right, shifting left only at the screen edge.
+                let x = max(screen.minX + 8, min(rect.minX, screen.maxX - width - 8))
                 let y = min(rect.minY - 4, screen.maxY - 8)
                 // Position the top edge in screen coordinates. A nil view
                 // disconnects menu placement from the small popover window.
