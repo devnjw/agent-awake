@@ -40,32 +40,60 @@ struct DashboardView: View {
 
 struct HelpView: View {
     let dismiss: () -> Void
-    @State private var showCompatibility = false
+    private let repository = URL(string: "https://github.com/devnjw/agent-awake")!
+    private let issues = URL(string: "https://github.com/devnjw/agent-awake/issues/new")!
+    private var version: String? {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("Keep local work running with the lid closed. Turn on Keep awake. By default, a charger is required; uncheck Only when plugged in to allow battery use.")
-                    Text("Turn off displays sleeps all connected screens. Keyboard, mouse or trackpad input wakes them normally. Enable Keep awake to keep work running while screens are off.")
-                    Text("High temperatures or an unplugged charger in charger-only mode pause the session. It resumes when conditions allow. Quitting turns it off.")
-                    Text("Use on a ventilated surface, never inside a bag.").foregroundStyle(.primary)
-                    DisclosureGroup("Compatibility", isExpanded: $showCompatibility) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Lid control uses a private macOS API. Test a short session after OS updates. Avoid running other sleep utilities at the same time.")
-                            Text("If both the app and its monitor are force-quit, restart your Mac to clear any remaining override. Network interruptions and agent approval prompts still require attention.")
-                        }.padding(.top, 10)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-            }
+        VStack(alignment: .leading, spacing: 20) {
+            helpSection("Keep awake",
+                "Keep work running with the lid closed. A charger is required by default; uncheck **Only when plugged in** to use battery. Quitting ends the session.")
+            helpSection("Screens",
+                "**Turn off displays** sleeps every screen without ending Keep awake. Keyboard, mouse, or trackpad input wakes them.")
+            helpSection("Safe use",
+                "High temperatures pause the session until the Mac cools. Use a ventilated surface, never inside a bag.")
+            helpSection("Compatibility",
+                "Test briefly after macOS updates. Avoid other sleep utilities. Restart your Mac if sleep stays abnormal after a forced quit.")
+
+            Divider()
+
             HStack {
+                Link("github.com/devnjw/agent-awake", destination: repository)
+                    .help("Open the AgentAwake repository")
+                Spacer()
+                Link("Report an issue", destination: issues)
+                    .help("Report a problem on GitHub")
+            }
+            .font(.system(size: 12))
+
+            HStack {
+                if let version {
+                    Text("Version \(version)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Done", action: dismiss).keyboardShortcut(.defaultAction)
             }
         }
-        .font(.system(size: 13)).foregroundStyle(.secondary)
-        .padding(24).frame(width: 380, height: showCompatibility ? 560 : 370)
+        .padding(24)
+        .frame(width: 440)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func helpSection(_ title: String, _ text: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

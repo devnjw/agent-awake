@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2 — 2026-10-11
+
+- Show all About & help content without a disclosure control or scrolling.
+- Shorten the copy and separate it into readable sections.
+- Add the repository address, a direct issue-report link, and the app version.
+
 ## 0.3.1 — 2026-10-09
 
 - Use awake time and sleep/wake notifications for monitor health checks,
