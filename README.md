@@ -2,7 +2,7 @@
 
 Keep Codex and other local agents running with your MacBook’s lid closed.
 
-**[Download for Apple Silicon](https://github.com/devnjw/agent-awake/releases/download/v0.3.3/AgentAwake-0.3.3-arm64.dmg)** · [한국어](README.ko.md)
+**[Download for Apple Silicon](https://github.com/devnjw/agent-awake/releases/download/v0.4.0/AgentAwake-0.4.0-arm64.dmg)** · [한국어](README.ko.md)
 
 macOS 14+ · Apple Silicon (M-series)
 
@@ -11,6 +11,8 @@ macOS 14+ · Apple Silicon (M-series)
 1. Open the DMG and drag **AgentAwake.app** to **Applications**.
 2. Launch it and click the **⚡** in your menu bar.
 3. Turn on **Keep awake**. A charger is required by default.
+
+Closing the lid dims the built-in screen while Keep awake is active. Opening it restores brightness; external screens are unchanged.
 
 ## Options · ⋯
 

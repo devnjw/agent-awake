@@ -19,6 +19,10 @@ macOS가 심각한 온도 상태를 보고하면 일시 정지했다가 온도�
 
 ## 화면 끄기
 
+Keep awake 중 덮개를 닫으면 내장 화면 밝기를 낮추고, 열면 저장한 밝기를 복원합니다.
+세션을 일시 정지하거나 종료해도 복원하며, 외부 화면 밝기는 바꾸지 않습니다.
+밝기 제어에도 비공개 macOS API를 사용하므로 아래의 짧은 덮개 시험에서 복원 여부를 확인하세요.
+
 **Turn off displays**는 외부 모니터를 포함한 모든 화면을 끕니다.
 키보드·마우스·트랙패드 입력으로 다시 켜집니다. Keep awake 상태는 바뀌지 않으므로,
 화면을 끈 동안에도 작업을 이어가려면 켜 두세요. 기존 macOS 잠금·암호 설정은 그대로입니다.
@@ -30,7 +34,7 @@ macOS가 실행을 막으면 [Apple의 앱별 ‘Open Anyway’ 안내](https://
 따르세요. 조직에서 관리하는 Mac은 이를 제한할 수 있습니다.
 Gatekeeper 전체를 비활성화하지 마세요.
 
-ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnjw/agent-awake/releases/tag/v0.3.3)에서도 제공합니다.
+ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnjw/agent-awake/releases/tag/v0.4.0)에서도 제공합니다.
 현재 버전은 Apple Silicon 전용입니다. Intel Mac은 이전
 [v0.2.1 Universal 버전](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1)을 사용할 수 있습니다.
 
@@ -47,6 +51,9 @@ ZIP 파일과 SHA256 체크섬은 [릴리스 페이지](https://github.com/devnj
 네트워크 단절, 에이전트의 승인 대기, 다른 앱 자체의 오류는 직접 확인해야 합니다.
 
 ## 문제 해결
+
+- **밝기 제어 오류가 나요:** 오류를 표시하되 정상적인 Keep awake 세션은 계속 유지합니다.
+  감시 프로세스를 강제 종료한 뒤 화면이 어둡게 남으면 밝기를 직접 조절하세요.
 
 - **토글이 켜져 있는데 작업이 멈춰요:** 전원 조건과 일시 정지 안내를 확인하고,
   위의 짧은 덮개 시험을 해보세요.

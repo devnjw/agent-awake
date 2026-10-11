@@ -19,6 +19,11 @@ interval from that moment; remaining time appears in the same menu.
 
 ## Displays
 
+While Keep awake is active, closing the lid lowers built-in display brightness
+and opening it restores the saved brightness. Pausing or ending the session also
+restores it. External display brightness is unchanged. Brightness control uses a
+private macOS API; check restoration during the short lid test below.
+
 **Turn off displays** sleeps all connected screens, including external monitors.
 Keyboard, mouse, or trackpad input wakes them normally. The action leaves Keep awake
 as you set it; enable it to keep jobs running while screens are off. Existing
@@ -31,7 +36,7 @@ the app, follow [Apple’s app-specific Open Anyway instructions](https://suppor
 Managed Macs may prohibit this. Do not disable Gatekeeper globally.
 
 A ZIP and SHA256 checksums are also available on the
-[release page](https://github.com/devnjw/agent-awake/releases/tag/v0.3.3).
+[release page](https://github.com/devnjw/agent-awake/releases/tag/v0.4.0).
 Current releases require Apple Silicon; Intel Macs can use the earlier
 [v0.2.1 universal preview](https://github.com/devnjw/agent-awake/releases/tag/v0.2.1).
 
@@ -48,6 +53,10 @@ other lid/sleep utilities at the same time. Network failures, agent approval
 prompts, and errors in another app still need your attention.
 
 ## Problems
+
+- **Brightness control fails:** the app reports the error while keeping a healthy
+  session running. If brightness stays low after force-quitting the monitor,
+  adjust it manually.
 
 - **The switch is on, but work pauses:** check the power mode and pause message,
   then try the short lid test above.

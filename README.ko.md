@@ -2,7 +2,7 @@
 
 MacBook 덮개를 닫아도 Codex와 로컬 에이전트 작업을 이어가세요.
 
-**[Apple Silicon 다운로드](https://github.com/devnjw/agent-awake/releases/download/v0.3.3/AgentAwake-0.3.3-arm64.dmg)** · [English](README.md)
+**[Apple Silicon 다운로드](https://github.com/devnjw/agent-awake/releases/download/v0.4.0/AgentAwake-0.4.0-arm64.dmg)** · [English](README.md)
 
 macOS 14 이상 · Apple Silicon (M 시리즈)
 
@@ -11,6 +11,8 @@ macOS 14 이상 · Apple Silicon (M 시리즈)
 1. DMG를 열고 **AgentAwake.app**을 **Applications**로 드래그합니다.
 2. 앱을 실행하고 메뉴 막대의 **⚡**를 누릅니다.
 3. **Keep awake**를 켭니다. 기본은 충전기 연결 시에만 동작합니다.
+
+Keep awake 중 덮개를 닫으면 내장 화면을 어둡게 하고, 열면 밝기를 복원합니다. 외부 화면 밝기는 바꾸지 않습니다.
 
 ## 설정 · ⋯
 

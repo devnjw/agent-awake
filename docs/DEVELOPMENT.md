@@ -138,6 +138,11 @@ both recovered without restarting the installed UI; Keep awake remained on.
 Sleep/wake was simulated in connection tests; physical sleep and lid closure
 were not forced during this verification.
 
+For v0.4.0, all 18 policy, connection, and brightness-restoration tests passed.
+The Developer ID arm64 ZIP/DMG passed signature, version, and checksum verification.
+Physical closed-lid brightness restoration and battery savings remain unverified;
+this release retains the early-preview status.
+
 ## Package a release
 
 Update `CFBundleShortVersionString` / `CFBundleVersion` in `Resources/Info.plist`

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — 2026-10-12
+
+- Dim the built-in display while Keep awake is active with the lid closed;
+  restore brightness when the lid opens or the session pauses or ends.
+  External display brightness is unchanged.
+- Report brightness-control failures without stopping a healthy keep-awake session.
+- Launch quietly and show the dashboard only from a valid menu-bar interaction;
+  close stale panels after app, screen, or sleep changes.
+
 ## 0.3.3 — 2026-10-11
 
 - Open the options menu below and to the right of its button by default.
