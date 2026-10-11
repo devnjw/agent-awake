@@ -29,6 +29,11 @@ struct DashboardView: View {
                     .font(.system(size: 12)).foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if model.error == nil, let message = model.status?.message {
+                Label(message, systemImage: "exclamationmark.circle")
+                    .font(.system(size: 12)).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(16).frame(width: 280)
         .fixedSize(horizontal: false, vertical: true)
@@ -51,7 +56,7 @@ struct HelpView: View {
             helpSection("Keep awake",
                 "Keep work running with the lid closed. A charger is required by default; uncheck **Only when plugged in** to use battery. Quitting ends the session.")
             helpSection("Screens",
-                "**Turn off displays** sleeps every screen without ending Keep awake. Keyboard, mouse, or trackpad input wakes them.")
+                "While Keep awake is active, closing the lid lowers built-in screen brightness to minimum. Opening it or ending the session restores the previous brightness. External screens are unchanged. **Turn off displays** sleeps every screen without ending Keep awake; input wakes them.")
             helpSection("Safe use",
                 "High temperatures pause the session until the Mac cools. Use a ventilated surface, never inside a bag.")
             helpSection("Compatibility",
