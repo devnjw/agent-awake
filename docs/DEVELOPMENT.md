@@ -35,6 +35,18 @@ executable. The bundle requires native execution and contains no Intel slice.
   A user stop or elapsed deadline prevents automatic resume.
 - `SessionGuard.swift`: a separate `--guard` process owns the power assertions.
 - `PowerController.swift`: IOKit calls and restoration.
+- `BuiltInDisplayBrightness.swift`: while the guard holds an active session and
+  the lid is closed, saves the built-in display brightness and sets it to zero
+  once per closed-lid interval. Opening the lid or pausing/stopping the session
+  restores the saved value. External displays are excluded. Unknown lid readings
+  preserve the saved value. No display-sleep or system-sleep command is issued.
+  Brightness failures are reported without releasing healthy keep-awake assertions;
+  failed writes/restores retry on subsequent evaluations. Cleanup restores brightness
+  on UI pipe EOF, heartbeat expiry, and handled termination signals. SIGKILL of the
+  guard cannot run cleanup; manually restore brightness in that case.
+  Apple Silicon control dynamically resolves private DisplayServices get/set
+  functions, so hardware and OS compatibility need verification. Physical lid
+  behavior and battery savings are not established by the unit tests.
 - `DashboardView.swift`: the panel and help window.
 - `OptionsButton.swift`: a borderless native menu button opens an NSMenu below
   the button in screen coordinates. Menu contents are captured when opened and
@@ -82,6 +94,9 @@ open, enable Keep awake, and run `python3 scripts/recovery_smoke_test.py`.
 This briefly suspends the UI and kills its monitor, then verifies a replacement
 monitor holds the assertions while the same UI stays running.
 
+Before a release, verify saved brightness restoration after lid reopening,
+manual stop, AC removal in charger-only mode, deadline expiry, and quitting.
+Verify external monitor brightness remains unchanged and agents keep running.
 Before a release, manually test a short closed-lid session in both power modes,
 charger removal, reconnection, display sleep/input wake, login startup, timer expiry,
 and quitting. Never manufacture thermal
