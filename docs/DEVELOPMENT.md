@@ -68,6 +68,14 @@ The selector is shared with powerd and other sleep utilities; ownership cannot
 be fully isolated. An existing external-display mode is preserved where possible.
 No persistent `pmset` preferences are written.
 
+## Popover behavior
+
+The app launches and reopens quietly. The dashboard opens from the menu-bar
+button only when its window and on-screen anchor are valid. App deactivation,
+activation of another app, status-item movement, screen configuration changes,
+and system sleep close the dashboard. This avoids launch-time panels anchored
+to an unpositioned status item and stale panels after display/lid changes.
+
 ## Validation
 
 `make test` runs policy and monitor-connection tests, and CI builds on Apple Silicon and verifies

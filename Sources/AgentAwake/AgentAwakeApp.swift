@@ -44,8 +44,21 @@ import AgentAwakeCore
         popover.contentViewController = hosting
         popover.behavior = .transient
         popover.animates = false
+        NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
+            name: NSApplication.didResignActiveNotification, object: nil)
+        if let window = statusItem.button?.window {
+            NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
+                name: NSWindow.didMoveNotification, object: window)
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(closePopover),
+            name: NSWorkspace.willSleepNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(otherApplicationActivated(_:)),
+            name: NSWorkspace.didActivateApplicationNotification, object: nil)
         model.connect()
-        showPopover()
+        // Launch quietly. The status-item window may not have its final position
+        // yet, especially after login or a display configuration change.
     }
     private func updateStatusItem() {
         let symbol = model.error != nil ? "exclamationmark.circle" : (model.active ? "bolt.fill" : "bolt")
@@ -58,9 +71,21 @@ import AgentAwakeCore
         if popover.isShown { popover.performClose(nil) }
         else { showPopover() }
     }
+    @objc private func closePopover() { popover.performClose(nil) }
+
+    @objc private func otherApplicationActivated(_ notification: Notification) {
+        guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+        closePopover()
+    }
+
     private func showPopover() {
-        guard !popover.isShown else { return }
-        guard let button = statusItem.button else { return }
+        guard !popover.isShown, statusItem.isVisible,
+              let button = statusItem.button, !button.isHiddenOrHasHiddenAncestor,
+              let window = button.window, window.isVisible, let screen = window.screen else { return }
+        let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
+        // Hidden or unpositioned status items must never create a floating panel.
+        guard !anchor.isEmpty, screen.frame.contains(anchor) else { return }
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
@@ -90,8 +115,14 @@ import AgentAwakeCore
         }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        showPopover(); return true
+        // Reopening/login activation must not create an unanchored panel.
+        // Open it only from the menu-bar button.
+        return true
     }
-    func applicationWillTerminate(_ notification: Notification) { model.shutdown() }
+    func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        model.shutdown()
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }
