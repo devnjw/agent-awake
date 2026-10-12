@@ -87,7 +87,17 @@ import AgentAwakeCore
         statusItem?.button?.state = selected ? .on : .off
         statusItem?.button?.highlight(selected)
     }
-    func popoverDidShow(_ notification: Notification) { setStatusItemSelected(true) }
+    static func configureMenuWindow(_ window: NSWindow) {
+        // Menu-bar managers recognize this native level as an open menu and
+        // defer auto-hide while the pointer moves into the controls.
+        window.level = .popUpMenu
+    }
+    func popoverDidShow(_ notification: Notification) {
+        if let window = popover.contentViewController?.view.window {
+            Self.configureMenuWindow(window)
+        }
+        setStatusItemSelected(true)
+    }
     func popoverDidClose(_ notification: Notification) {
         setStatusItemSelected(controlsPanel?.isVisible == true)
     }
@@ -127,6 +137,7 @@ import AgentAwakeCore
             panel.title = "AgentAwake"
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
+            Self.configureMenuWindow(panel)
             panel.delegate = self
             controlsPanel = panel
         }
