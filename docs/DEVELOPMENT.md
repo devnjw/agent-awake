@@ -70,17 +70,18 @@ No persistent `pmset` preferences are written.
 
 ## Menu behavior
 
-The app launches quietly. The status item owns a native NSMenu containing the
+The app launches quietly. A one-time `--resume-awake-session` argument resumes
+Keep awake after guard readiness for a local update; ordinary/login launch stays off. The status item owns a native NSMenu containing the
 Keep awake checkbox and existing settings. AppKit manages its pressed background,
 tracking, outside clicks, and switching to other status menus; this path neither
 activates the app nor manually changes button highlighting. This also provides
 native menu-window detection for menu-bar managers such as LessBar.
 
 Explicit Raycast/Finder reopen requests open the native menu when the live
-status-item anchor is available. Otherwise, a titled controls panel opens on the
-current screen for clamshell use. A second app copy forwards its request to the
+status-item anchor is available. Otherwise, the same native menu opens near the pointer within
+the current screen bounds. No separate fallback controls window is created. A second app copy forwards its request to the
 existing instance. Screen changes, app deactivation, and system sleep close
-stale controls. Help and the fallback panel activate intentionally when opened.
+stale controls. Only the explicitly requested help window activates the app.
 
 ## Validation
 

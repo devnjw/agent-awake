@@ -12,7 +12,7 @@ import AgentAwakeCore
             return
         }
         let app = NSApplication.shared
-        let delegate = AppDelegate()
+        let delegate = AppDelegate(resumeAwakeOnReady: CommandLine.arguments.contains("--resume-awake-session"))
         app.delegate = delegate
         app.setActivationPolicy(.accessory)
         withExtendedLifetime(delegate) { app.run() }
@@ -25,12 +25,13 @@ import AgentAwakeCore
     private var displayedStatusSymbol: String?
     private var menuCoordinator: OptionsButton.Coordinator?
     private var helpWindow: NSWindow?
-    private var controlsPanel: NSPanel?
     private static let reopenNotification = Notification.Name("io.github.devnjw.AgentAwake.showControls")
     private let presentOnReopen: (() -> Void)?
+    private var resumeAwakeOnReady: Bool
 
-    init(presentOnReopen: (() -> Void)? = nil) {
+    init(presentOnReopen: (() -> Void)? = nil, resumeAwakeOnReady: Bool = false) {
         self.presentOnReopen = presentOnReopen
+        self.resumeAwakeOnReady = resumeAwakeOnReady
         super.init()
     }
 
@@ -51,7 +52,14 @@ import AgentAwakeCore
         menuCoordinator = coordinator
         statusItem.menu = coordinator.makeStatusMenu()
         updateStatusItem()
-        model.onStatusChange = { [weak self] in self?.updateStatusItem() }
+        model.onStatusChange = { [weak self] in
+            guard let self else { return }
+            if self.resumeAwakeOnReady && self.model.isReady {
+                self.resumeAwakeOnReady = false
+                self.model.start()
+            }
+            self.updateStatusItem()
+        }
         NotificationCenter.default.addObserver(self, selector: #selector(closeControls),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(closeControls),
@@ -79,12 +87,8 @@ import AgentAwakeCore
         let tooltip = "AgentAwake · \(model.title)"
         if statusItem?.button?.toolTip != tooltip { statusItem?.button?.toolTip = tooltip }
     }
-    static func configureMenuWindow(_ window: NSWindow) {
-        window.level = .popUpMenu
-    }
     @objc private func closeControls() {
         statusItem?.menu?.cancelTracking()
-        controlsPanel?.close()
     }
     @objc private func reopenRequested() { showDashboard() }
 
@@ -96,29 +100,18 @@ import AgentAwakeCore
 
     private func showDashboard() {
         if showNativeMenu() { return }
-        // In clamshell mode the status-item window may still reference the
-        // disconnected built-in screen. Explicit open requests must remain usable.
-        if controlsPanel == nil {
-            let hosting = NSHostingController(rootView: DashboardView(model: model,
-                showHelp: { [weak self] in self?.showHelp() },
-                turnOffDisplays: { [weak self] in self?.turnOffDisplays() }))
-            hosting.sizingOptions = [.preferredContentSize]
-            let panel = NSPanel(contentViewController: hosting)
-            panel.styleMask = [.titled, .closable, .utilityWindow]
-            panel.title = "AgentAwake"
-            panel.isReleasedWhenClosed = false
-            panel.hidesOnDeactivate = false
-            Self.configureMenuWindow(panel)
-            controlsPanel = panel
-        }
-        if let panel = controlsPanel,
-           let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
-            let visible = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2,
-                y: visible.midY - panel.frame.height / 2))
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        controlsPanel?.makeKeyAndOrderFront(nil)
+        // Hidden status items and clamshell display changes still use a real
+        // NSMenu. Never create or activate a second controls window.
+        guard let menu = statusItem.menu,
+              let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main
+              else { return }
+        menu.update()
+        let visible = screen.visibleFrame
+        let pointer = NSEvent.mouseLocation
+        let point = NSPoint(
+            x: max(visible.minX + 8, min(pointer.x, visible.maxX - menu.size.width - 8)),
+            y: max(visible.minY + min(menu.size.height, visible.height), min(pointer.y, visible.maxY)))
+        menu.popUp(positioning: nil, at: point, in: nil)
     }
 
     private func showNativeMenu() -> Bool {
@@ -128,7 +121,6 @@ import AgentAwakeCore
         guard !anchor.isEmpty,
               NSScreen.screens.contains(where: { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.midY)) })
               else { return false }
-        controlsPanel?.close()
         // NSStatusItem owns menu tracking and the selected background. Do not
         // activate the app or manually draw a pressed state on this path.
         button.performClick(nil)
