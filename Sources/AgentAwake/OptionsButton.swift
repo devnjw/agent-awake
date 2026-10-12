@@ -162,8 +162,15 @@ struct OptionsButton: NSViewRepresentable {
                 control = toggle
                 row.addSubview(toggle)
                 let label = NSTextField(labelWithString: title)
-                label.frame = NSRect(x: 14, y: 6, width: 170, height: 20)
+                label.frame = NSRect(x: 14, y: 6, width: 124, height: 20)
+                label.font = .systemFont(ofSize: 13, weight: .semibold)
                 row.addSubview(label)
+                let stateLabel = NSTextField(labelWithString: "Off")
+                stateLabel.identifier = NSUserInterfaceItemIdentifier("awakeState")
+                stateLabel.frame = NSRect(x: 138, y: 6, width: 54, height: 20)
+                stateLabel.alignment = .right
+                stateLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+                row.addSubview(stateLabel)
             } else {
                 let button = NSButton(checkboxWithTitle: title, target: self, action: action)
                 if radio { button.setButtonType(.radio) }
@@ -192,6 +199,14 @@ struct OptionsButton: NSViewRepresentable {
                 if let button = control as? NSButton, button.state != state { button.state = state }
                 let isAwake: Bool
                 if case .awake = kind { isAwake = true } else { isAwake = false }
+                if isAwake, let label = entry.view?.subviews.first(where: {
+                    $0.identifier == NSUserInterfaceItemIdentifier("awakeState")
+                }) as? NSTextField {
+                    let text = checked ? "On" : "Off"
+                    if label.stringValue != text { label.stringValue = text }
+                    label.textColor = checked ? .systemGreen : .secondaryLabelColor
+                    control.setAccessibilityValue(text)
+                }
                 let enabled = !(isAwake && !model.enabled && !model.isReady && !model.canRetry)
                 if control.isEnabled != enabled { control.isEnabled = enabled }
             }
