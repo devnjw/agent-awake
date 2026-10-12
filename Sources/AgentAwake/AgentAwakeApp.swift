@@ -19,7 +19,7 @@ import AgentAwakeCore
     }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowDelegate {
     private let model = AppModel()
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
@@ -44,6 +44,7 @@ import AgentAwakeCore
             NSApp.terminate(nil); return
         }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.setButtonType(.pushOnPushOff)
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
         updateStatusItem()
@@ -53,6 +54,7 @@ import AgentAwakeCore
             turnOffDisplays: { [weak self] in self?.turnOffDisplays() }))
         hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
+        popover.delegate = self
         popover.behavior = .transient
         popover.animates = false
         NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
@@ -79,6 +81,20 @@ import AgentAwakeCore
         icon?.isTemplate = true
         statusItem?.button?.image = icon
         statusItem?.button?.toolTip = "AgentAwake · \(model.title)"
+        setStatusItemSelected(popover.isShown || controlsPanel?.isVisible == true)
+    }
+    private func setStatusItemSelected(_ selected: Bool) {
+        statusItem?.button?.state = selected ? .on : .off
+        statusItem?.button?.highlight(selected)
+    }
+    func popoverDidShow(_ notification: Notification) { setStatusItemSelected(true) }
+    func popoverDidClose(_ notification: Notification) {
+        setStatusItemSelected(controlsPanel?.isVisible == true)
+    }
+    func windowWillClose(_ notification: Notification) {
+        if notification.object as? NSWindow === controlsPanel {
+            setStatusItemSelected(popover.isShown)
+        }
     }
     @objc private func togglePopover() {
         if popover.isShown || controlsPanel?.isVisible == true { closePopover() }
@@ -87,6 +103,7 @@ import AgentAwakeCore
     @objc private func closePopover() {
         popover.performClose(nil)
         controlsPanel?.close()
+        setStatusItemSelected(false)
     }
     @objc private func reopenRequested() { showDashboard() }
 
@@ -110,6 +127,7 @@ import AgentAwakeCore
             panel.title = "AgentAwake"
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
+            panel.delegate = self
             controlsPanel = panel
         }
         if let panel = controlsPanel,
@@ -120,6 +138,7 @@ import AgentAwakeCore
         }
         NSApp.activate(ignoringOtherApps: true)
         controlsPanel?.makeKeyAndOrderFront(nil)
+        setStatusItemSelected(controlsPanel?.isVisible == true)
     }
 
     private func showPopover() -> Bool {
