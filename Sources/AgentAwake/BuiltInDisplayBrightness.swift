@@ -41,7 +41,9 @@ final class BuiltInDisplayBrightness {
         // the brightness saved during a previous closed-lid reading.
         guard lidClosed == true else { return }
         let ids = displays()
-        guard !ids.isEmpty else { throw BrightnessError.unavailable }
+        // A closed built-in panel may be removed from the online list entirely.
+        // There is no visible internal screen to dim; external screens stay unchanged.
+        guard !ids.isEmpty else { return }
         for id in ids where !dimmed.contains(id) {
             if originals[id] == nil {
                 let value = try openLevels[id] ?? read(id)

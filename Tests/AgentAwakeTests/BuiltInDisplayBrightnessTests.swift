@@ -62,6 +62,13 @@ struct BuiltInDisplayBrightnessTests {
         #expect(f.levels[1] == 0.65)
     }
 
+    @Test func clamshellWithoutAnOnlineBuiltInDisplayDoesNotBlockControls() throws {
+        let f = Fixture()
+        f.ids = []
+        try f.controller.update(active: true, lidClosed: true)
+        #expect(f.writes.isEmpty)
+    }
+
     @Test func failedReadNeverChangesBrightnessAndCanRetry() throws {
         let f = Fixture()
         f.failRead = true

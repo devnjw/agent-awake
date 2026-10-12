@@ -70,8 +70,12 @@ No persistent `pmset` preferences are written.
 
 ## Popover behavior
 
-The app launches and reopens quietly. The dashboard opens from the menu-bar
-button only when its window and on-screen anchor are valid. App deactivation,
+The app launches quietly. Explicit menu-bar and Raycast/Finder reopen requests
+show controls. The dashboard uses the live screen list to validate its menu-bar
+anchor rather than the status-item window's potentially stale screen after lid
+closure. If the anchor is unavailable, controls open in a titled panel centered
+on the current screen. Launching another app copy forwards the request to the
+existing instance instead of only activating a windowless process. App deactivation,
 activation of another app, status-item movement, screen configuration changes,
 and system sleep close the dashboard. This avoids launch-time panels anchored
 to an unpositioned status item and stale panels after display/lid changes.

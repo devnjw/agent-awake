@@ -24,13 +24,24 @@ import AgentAwakeCore
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var helpWindow: NSWindow?
+    private var controlsPanel: NSPanel?
+    private static let reopenNotification = Notification.Name("io.github.devnjw.AgentAwake.showControls")
+    private let presentOnReopen: (() -> Void)?
+
+    init(presentOnReopen: (() -> Void)? = nil) {
+        self.presentOnReopen = presentOnReopen
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // A second launch focuses the existing instance instead of starting another guard.
         if let identifier = Bundle.main.bundleIdentifier,
            let existing = NSRunningApplication.runningApplications(withBundleIdentifier: identifier)
                .first(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
-            existing.activate(options: [.activateAllWindows]); NSApp.terminate(nil); return
+            existing.activate(options: [.activateAllWindows])
+            DistributedNotificationCenter.default().postNotificationName(Self.reopenNotification,
+                object: String(existing.processIdentifier), userInfo: nil, deliverImmediately: true)
+            NSApp.terminate(nil); return
         }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.target = self
@@ -56,6 +67,8 @@ import AgentAwakeCore
             name: NSWorkspace.willSleepNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(otherApplicationActivated(_:)),
             name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenRequested),
+            name: Self.reopenNotification, object: String(ProcessInfo.processInfo.processIdentifier))
         model.connect()
         // Launch quietly. The status-item window may not have its final position
         // yet, especially after login or a display configuration change.
@@ -68,10 +81,14 @@ import AgentAwakeCore
         statusItem?.button?.toolTip = "AgentAwake · \(model.title)"
     }
     @objc private func togglePopover() {
-        if popover.isShown { popover.performClose(nil) }
-        else { showPopover() }
+        if popover.isShown || controlsPanel?.isVisible == true { closePopover() }
+        else { showDashboard() }
     }
-    @objc private func closePopover() { popover.performClose(nil) }
+    @objc private func closePopover() {
+        popover.performClose(nil)
+        controlsPanel?.close()
+    }
+    @objc private func reopenRequested() { showDashboard() }
 
     @objc private func otherApplicationActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
@@ -79,19 +96,49 @@ import AgentAwakeCore
         closePopover()
     }
 
-    private func showPopover() {
-        guard !popover.isShown, statusItem.isVisible,
+    private func showDashboard() {
+        if showPopover() { controlsPanel?.close(); return }
+        // In clamshell mode the status-item window may still reference the
+        // disconnected built-in screen. Explicit open requests must remain usable.
+        if controlsPanel == nil {
+            let hosting = NSHostingController(rootView: DashboardView(model: model,
+                showHelp: { [weak self] in self?.showHelp() },
+                turnOffDisplays: { [weak self] in self?.turnOffDisplays() }))
+            hosting.sizingOptions = [.preferredContentSize]
+            let panel = NSPanel(contentViewController: hosting)
+            panel.styleMask = [.titled, .closable, .utilityWindow]
+            panel.title = "AgentAwake"
+            panel.isReleasedWhenClosed = false
+            panel.hidesOnDeactivate = false
+            controlsPanel = panel
+        }
+        if let panel = controlsPanel,
+           let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
+            let visible = screen.visibleFrame
+            panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2,
+                y: visible.midY - panel.frame.height / 2))
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        controlsPanel?.makeKeyAndOrderFront(nil)
+    }
+
+    private func showPopover() -> Bool {
+        if popover.isShown { return true }
+        guard statusItem.isVisible,
               let button = statusItem.button, !button.isHiddenOrHasHiddenAncestor,
-              let window = button.window, window.isVisible, let screen = window.screen else { return }
+              let window = button.window else { return false }
         let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
-        // Hidden or unpositioned status items must never create a floating panel.
-        guard !anchor.isEmpty, screen.frame.contains(anchor) else { return }
+        // Use the live screen list, not a stale window.screen after lid closure.
+        guard !anchor.isEmpty,
+              NSScreen.screens.contains(where: { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.midY)) })
+              else { return false }
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
+        return true
     }
     private func showHelp() {
-        popover.performClose(nil)
+        closePopover()
         if helpWindow == nil {
             let hosting = NSHostingController(rootView: HelpView(dismiss: { [weak self] in self?.helpWindow?.close() }))
             hosting.sizingOptions = [.preferredContentSize]
@@ -106,20 +153,23 @@ import AgentAwakeCore
         NSApp.activate(ignoringOtherApps: true)
     }
     private func turnOffDisplays() {
-        popover.performClose(nil)
+        closePopover()
         // Let the menu dismiss and its mouse-up finish before sleeping displays.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.model.turnOffDisplays { [weak self] succeeded in
-                if !succeeded { self?.showPopover() }
+                if !succeeded { self?.showDashboard() }
             }
         }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // Reopening/login activation must not create an unanchored panel.
-        // Open it only from the menu-bar button.
+        // Launch stays quiet, but explicit Raycast/Finder/Dock reopen requests
+        // must show controls even when the status-item anchor is unavailable.
+        if let presentOnReopen { presentOnReopen() }
+        else { showDashboard() }
         return true
     }
     func applicationWillTerminate(_ notification: Notification) {
+        DistributedNotificationCenter.default().removeObserver(self)
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         model.shutdown()
