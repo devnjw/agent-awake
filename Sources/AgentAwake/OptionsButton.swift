@@ -35,6 +35,8 @@ struct OptionsButton: NSViewRepresentable {
         var parent: OptionsButton
         private var tracking = false
         private var statusMenu: NSMenu?
+        private enum Setting { case awake, power, login, duration(Int) }
+        private var settings: [(Setting, NSControl, NSMenuItem)] = []
 
         init(_ parent: OptionsButton) { self.parent = parent }
 
@@ -86,17 +88,20 @@ struct OptionsButton: NSViewRepresentable {
         }
 
         private func populateStatusMenu(_ menu: NSMenu) {
-            menu.addItem(item("Keep awake", #selector(toggleAwake), checked: parent.model.enabled))
+            settings.removeAll()
+            menu.addItem(settingItem("Keep awake", #selector(toggleAwake(_:)), kind: .awake, asSwitch: true))
             menu.addItem(.separator())
-            populate(menu)
+            populate(menu, persistent: true)
+            refreshSettings()
         }
 
-        @objc private func toggleAwake() {
+        @objc private func toggleAwake(_ sender: NSControl) {
             if parent.model.enabled { parent.model.stop() }
             else { parent.model.start() }
+            refreshSettings()
         }
 
-        private func populate(_ menu: NSMenu) {
+        private func populate(_ menu: NSMenu, persistent: Bool = false) {
             let model = parent.model
             // Pull-down buttons display the first item on the button, and hide
             // it from the open menu. Keep the icon out of the command list.
@@ -106,12 +111,17 @@ struct OptionsButton: NSViewRepresentable {
             menu.addItem(label)
             menu.addItem(item("Turn off displays", #selector(sleepDisplays)))
             menu.addItem(.separator())
-            menu.addItem(item("Only when plugged in", #selector(changePower), checked: model.powerMode == .pluggedInOnly))
+            menu.addItem(persistent
+                ? settingItem("Only when plugged in", #selector(changePower(_:)), kind: .power)
+                : item("Only when plugged in", #selector(changePower(_:)), checked: model.powerMode == .pluggedInOnly))
             menu.addItem(.separator())
             menu.addItem(.sectionHeader(title: "Stop after"))
             for (title, seconds) in [("Until stopped", 0), ("1 hour", 3600), ("2 hours", 7200), ("4 hours", 14400), ("8 hours", 28800)] {
-                let option = item(title, #selector(changeDuration(_:)), checked: model.duration == seconds)
+                let option = persistent
+                    ? settingItem(title, #selector(changeDuration(_:)), kind: .duration(seconds), radio: true)
+                    : item(title, #selector(changeDuration(_:)), checked: model.duration == seconds)
                 option.tag = seconds
+                (option.view?.subviews.first as? NSControl)?.tag = seconds
                 menu.addItem(option)
             }
             if model.enabled && model.duration > 0 {
@@ -120,7 +130,9 @@ struct OptionsButton: NSViewRepresentable {
                 menu.addItem(remaining)
             }
             menu.addItem(.separator())
-            menu.addItem(item("Launch at login", #selector(changeLogin), checked: model.launchAtLogin))
+            menu.addItem(persistent
+                ? settingItem("Launch at login", #selector(changeLogin(_:)), kind: .login)
+                : item("Launch at login", #selector(changeLogin(_:)), checked: model.launchAtLogin))
             menu.addItem(.separator())
             menu.addItem(item("About & help", #selector(help)))
             let quit = item("Quit AgentAwake", #selector(quitApp))
@@ -136,12 +148,69 @@ struct OptionsButton: NSViewRepresentable {
             return item
         }
 
-        @objc private func sleepDisplays() { parent.turnOffDisplays() }
-        @objc private func changePower() {
-            parent.model.setPowerMode(parent.model.powerMode == .pluggedInOnly ? .anyPower : .pluggedInOnly)
+        private func settingItem(_ title: String, _ action: Selector, kind: Setting,
+                                 asSwitch: Bool = false, radio: Bool = false) -> NSMenuItem {
+            // A custom item view dispatches control actions directly, without
+            // selecting a command and dismissing the native menu tracking loop.
+            let entry = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            let row = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
+            let control: NSControl
+            if asSwitch {
+                let toggle = NSSwitch(frame: NSRect(x: 198, y: 2, width: 44, height: 26))
+                toggle.target = self; toggle.action = action
+                toggle.setAccessibilityLabel(title)
+                control = toggle
+                row.addSubview(toggle)
+                let label = NSTextField(labelWithString: title)
+                label.frame = NSRect(x: 14, y: 6, width: 170, height: 20)
+                row.addSubview(label)
+            } else {
+                let button = NSButton(checkboxWithTitle: title, target: self, action: action)
+                if radio { button.setButtonType(.radio) }
+                button.frame = NSRect(x: 14, y: 4, width: 232, height: 22)
+                control = button
+                row.addSubview(button)
+            }
+            entry.view = row
+            settings.append((kind, control, entry))
+            return entry
         }
-        @objc private func changeDuration(_ item: NSMenuItem) { parent.model.setDuration(item.tag) }
-        @objc private func changeLogin() { parent.model.setLogin(!parent.model.launchAtLogin) }
+
+        func refreshSettings() {
+            let model = parent.model
+            for (kind, control, entry) in settings {
+                let checked: Bool
+                switch kind {
+                case .awake: checked = model.enabled
+                case .power: checked = model.powerMode == .pluggedInOnly
+                case .login: checked = model.launchAtLogin
+                case .duration(let seconds): checked = model.duration == seconds
+                }
+                let state: NSControl.StateValue = checked ? .on : .off
+                if entry.state != state { entry.state = state }
+                if let toggle = control as? NSSwitch, toggle.state != state { toggle.state = state }
+                if let button = control as? NSButton, button.state != state { button.state = state }
+                let isAwake: Bool
+                if case .awake = kind { isAwake = true } else { isAwake = false }
+                let enabled = !(isAwake && !model.enabled && !model.isReady && !model.canRetry)
+                if control.isEnabled != enabled { control.isEnabled = enabled }
+            }
+        }
+
+        @objc private func sleepDisplays() { parent.turnOffDisplays() }
+        @objc private func changePower(_ sender: Any?) {
+            parent.model.setPowerMode(parent.model.powerMode == .pluggedInOnly ? .anyPower : .pluggedInOnly)
+            refreshSettings()
+        }
+        @objc private func changeDuration(_ sender: Any) {
+            let seconds = (sender as? NSControl)?.tag ?? (sender as? NSMenuItem)?.tag ?? 0
+            parent.model.setDuration(seconds)
+            refreshSettings()
+        }
+        @objc private func changeLogin(_ sender: Any?) {
+            parent.model.setLogin(!parent.model.launchAtLogin)
+            refreshSettings()
+        }
         @objc private func help() { parent.showHelp() }
         @objc private func quitApp() { NSApp.terminate(nil) }
     }

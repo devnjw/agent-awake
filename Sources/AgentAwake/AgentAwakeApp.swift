@@ -58,6 +58,7 @@ import AgentAwakeCore
                 self.resumeAwakeOnReady = false
                 self.model.start()
             }
+            self.menuCoordinator?.refreshSettings()
             self.updateStatusItem()
         }
         NotificationCenter.default.addObserver(self, selector: #selector(closeControls),

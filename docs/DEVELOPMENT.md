@@ -72,7 +72,9 @@ No persistent `pmset` preferences are written.
 
 The app launches quietly. A one-time `--resume-awake-session` argument resumes
 Keep awake after guard readiness for a local update; ordinary/login launch stays off. The status item owns a native NSMenu containing the
-Keep awake checkbox and existing settings. AppKit manages its pressed background,
+Keep awake switch and embedded checkbox/radio settings. Their control actions
+do not select a menu command, so multiple edits keep the menu presented; checked
+states refresh in place without rebuilding a tracking menu. AppKit manages its pressed background,
 tracking, outside clicks, and switching to other status menus; this path neither
 activates the app nor manually changes button highlighting. This also provides
 native menu-window detection for menu-bar managers such as LessBar.
