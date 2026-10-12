@@ -23,6 +23,7 @@ import AgentAwakeCore
     private let model = AppModel()
     private var statusItem: NSStatusItem!
     private var displayedStatusSymbol: String?
+    private var outsideClickMonitor: Any?
     private let popover = NSPopover()
     private var helpWindow: NSWindow?
     private var controlsPanel: NSPanel?
@@ -68,6 +69,11 @@ import AgentAwakeCore
             name: NSWorkspace.didActivateApplicationNotification, object: nil)
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenRequested),
             name: Self.reopenNotification, object: String(ProcessInfo.processInfo.processIdentifier))
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            // Other status-item menus often do not activate their owning app.
+            // Close on the initiating click, before a second menu can overlap.
+            MainActor.assumeIsolated { self?.outsideClick() }
+        }
         model.connect()
         // Launch quietly. The status-item window may not have its final position
         // yet, especially after login or a display configuration change.
@@ -111,6 +117,15 @@ import AgentAwakeCore
     @objc private func togglePopover() {
         if popover.isShown || controlsPanel?.isVisible == true { closePopover() }
         else { showDashboard() }
+    }
+    private func outsideClick() {
+        // macOS can host status items in another process's native window.
+        // Preserve the initiating click on our own icon; its action handles toggle.
+        if let button = statusItem?.button, let window = button.window {
+            let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
+            if frame.contains(NSEvent.mouseLocation) { return }
+        }
+        closePopover()
     }
     @objc private func closePopover() {
         popover.performClose(nil)
@@ -201,6 +216,7 @@ import AgentAwakeCore
         return true
     }
     func applicationWillTerminate(_ notification: Notification) {
+        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
         DistributedNotificationCenter.default().removeObserver(self)
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
