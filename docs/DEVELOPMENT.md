@@ -68,17 +68,19 @@ The selector is shared with powerd and other sleep utilities; ownership cannot
 be fully isolated. An existing external-display mode is preserved where possible.
 No persistent `pmset` preferences are written.
 
-## Popover behavior
+## Menu behavior
 
-The app launches quietly. Explicit menu-bar and Raycast/Finder reopen requests
-show controls. The dashboard uses the live screen list to validate its menu-bar
-anchor rather than the status-item window's potentially stale screen after lid
-closure. If the anchor is unavailable, controls open in a titled panel centered
-on the current screen. Launching another app copy forwards the request to the
-existing instance instead of only activating a windowless process. App deactivation,
-activation of another app, status-item movement, screen configuration changes,
-and system sleep close the dashboard. This avoids launch-time panels anchored
-to an unpositioned status item and stale panels after display/lid changes.
+The app launches quietly. The status item owns a native NSMenu containing the
+Keep awake checkbox and existing settings. AppKit manages its pressed background,
+tracking, outside clicks, and switching to other status menus; this path neither
+activates the app nor manually changes button highlighting. This also provides
+native menu-window detection for menu-bar managers such as LessBar.
+
+Explicit Raycast/Finder reopen requests open the native menu when the live
+status-item anchor is available. Otherwise, a titled controls panel opens on the
+current screen for clamshell use. A second app copy forwards its request to the
+existing instance. Screen changes, app deactivation, and system sleep close
+stale controls. Help and the fallback panel activate intentionally when opened.
 
 ## Validation
 

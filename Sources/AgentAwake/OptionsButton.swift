@@ -34,6 +34,7 @@ struct OptionsButton: NSViewRepresentable {
     @MainActor final class Coordinator: NSObject, NSMenuDelegate {
         var parent: OptionsButton
         private var tracking = false
+        private var statusMenu: NSMenu?
 
         init(_ parent: OptionsButton) { self.parent = parent }
 
@@ -60,7 +61,8 @@ struct OptionsButton: NSViewRepresentable {
         func menuNeedsUpdate(_ menu: NSMenu) {
             guard !tracking else { return }
             menu.removeAllItems()
-            populate(menu)
+            if menu === statusMenu { populateStatusMenu(menu) }
+            else { populate(menu) }
         }
 
         func menuWillOpen(_ menu: NSMenu) { tracking = true }
@@ -72,6 +74,26 @@ struct OptionsButton: NSViewRepresentable {
             menu.delegate = self
             populate(menu)
             return menu
+        }
+
+        func makeStatusMenu() -> NSMenu {
+            let menu = NSMenu(title: "AgentAwake")
+            menu.autoenablesItems = false
+            menu.delegate = self
+            statusMenu = menu
+            populateStatusMenu(menu)
+            return menu
+        }
+
+        private func populateStatusMenu(_ menu: NSMenu) {
+            menu.addItem(item("Keep awake", #selector(toggleAwake), checked: parent.model.enabled))
+            menu.addItem(.separator())
+            populate(menu)
+        }
+
+        @objc private func toggleAwake() {
+            if parent.model.enabled { parent.model.stop() }
+            else { parent.model.start() }
         }
 
         private func populate(_ menu: NSMenu) {

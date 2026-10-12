@@ -19,13 +19,11 @@ import AgentAwakeCore
     }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = AppModel()
     private var statusItem: NSStatusItem!
     private var displayedStatusSymbol: String?
-    private var statusItemSelection = false
-    private var outsideClickMonitor: Any?
-    private let popover = NSPopover()
+    private var menuCoordinator: OptionsButton.Coordinator?
     private var helpWindow: NSWindow?
     private var controlsPanel: NSPanel?
     private static let reopenNotification = Notification.Name("io.github.devnjw.AgentAwake.showControls")
@@ -47,34 +45,23 @@ import AgentAwakeCore
             NSApp.terminate(nil); return
         }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.setButtonType(.pushOnPushOff)
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(togglePopover)
-        updateStatusItem()
-        model.onStatusChange = { [weak self] in self?.updateStatusItem() }
-        let hosting = NSHostingController(rootView: DashboardView(model: model,
+        let coordinator = OptionsButton.Coordinator(OptionsButton(model: model,
             showHelp: { [weak self] in self?.showHelp() },
             turnOffDisplays: { [weak self] in self?.turnOffDisplays() }))
-        hosting.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = hosting
-        popover.delegate = self
-        popover.behavior = .transient
-        popover.animates = false
-        NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
+        menuCoordinator = coordinator
+        statusItem.menu = coordinator.makeStatusMenu()
+        updateStatusItem()
+        model.onStatusChange = { [weak self] in self?.updateStatusItem() }
+        NotificationCenter.default.addObserver(self, selector: #selector(closeControls),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
+        NotificationCenter.default.addObserver(self, selector: #selector(closeControls),
             name: NSApplication.didResignActiveNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(closePopover),
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(closeControls),
             name: NSWorkspace.willSleepNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(otherApplicationActivated(_:)),
             name: NSWorkspace.didActivateApplicationNotification, object: nil)
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenRequested),
             name: Self.reopenNotification, object: String(ProcessInfo.processInfo.processIdentifier))
-        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            // Other status-item menus often do not activate their owning app.
-            // Close on the initiating click, before a second menu can overlap.
-            MainActor.assumeIsolated { self?.outsideClick() }
-        }
         model.connect()
         // Launch quietly. The status-item window may not have its final position
         // yet, especially after login or a display configuration change.
@@ -88,73 +75,27 @@ import AgentAwakeCore
             icon?.isTemplate = true
             statusItem?.button?.image = icon
             displayedStatusSymbol = symbol
-            if statusItemSelection { statusItem?.button?.highlight(true) }
         }
         let tooltip = "AgentAwake · \(model.title)"
         if statusItem?.button?.toolTip != tooltip { statusItem?.button?.toolTip = tooltip }
     }
-    private func setStatusItemSelected(_ selected: Bool) {
-        guard statusItemSelection != selected else { return }
-        statusItemSelection = selected
-        statusItem?.button?.state = selected ? .on : .off
-        statusItem?.button?.highlight(selected)
-        if selected {
-            // Native mouse tracking clears its temporary pressed background
-            // after the action returns. Restore it once after that mouse-up,
-            // never on heartbeat refreshes or repeated presentation callbacks.
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.statusItemSelection else { return }
-                self.statusItem?.button?.highlight(true)
-            }
-        }
-    }
     static func configureMenuWindow(_ window: NSWindow) {
-        // Menu-bar managers recognize this native level as an open menu and
-        // defer auto-hide while the pointer moves into the controls.
         window.level = .popUpMenu
     }
-    func popoverDidShow(_ notification: Notification) {
-        if let window = popover.contentViewController?.view.window {
-            Self.configureMenuWindow(window)
-        }
-        setStatusItemSelected(true)
-    }
-    func popoverDidClose(_ notification: Notification) {
-        setStatusItemSelected(controlsPanel?.isVisible == true)
-    }
-    func windowWillClose(_ notification: Notification) {
-        if notification.object as? NSWindow === controlsPanel {
-            setStatusItemSelected(popover.isShown)
-        }
-    }
-    @objc private func togglePopover() {
-        if popover.isShown || controlsPanel?.isVisible == true { closePopover() }
-        else { showDashboard() }
-    }
-    private func outsideClick() {
-        // macOS can host status items in another process's native window.
-        // Preserve the initiating click on our own icon; its action handles toggle.
-        if let button = statusItem?.button, let window = button.window {
-            let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
-            if frame.contains(NSEvent.mouseLocation) { return }
-        }
-        closePopover()
-    }
-    @objc private func closePopover() {
-        popover.performClose(nil)
+    @objc private func closeControls() {
+        statusItem?.menu?.cancelTracking()
         controlsPanel?.close()
-        setStatusItemSelected(false)
     }
     @objc private func reopenRequested() { showDashboard() }
 
     @objc private func otherApplicationActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
-        closePopover()
+        closeControls()
     }
 
     private func showDashboard() {
-        if showPopover() { controlsPanel?.close(); return }
+        if showNativeMenu() { return }
         // In clamshell mode the status-item window may still reference the
         // disconnected built-in screen. Explicit open requests must remain usable.
         if controlsPanel == nil {
@@ -168,7 +109,6 @@ import AgentAwakeCore
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
             Self.configureMenuWindow(panel)
-            panel.delegate = self
             controlsPanel = panel
         }
         if let panel = controlsPanel,
@@ -179,26 +119,23 @@ import AgentAwakeCore
         }
         NSApp.activate(ignoringOtherApps: true)
         controlsPanel?.makeKeyAndOrderFront(nil)
-        setStatusItemSelected(controlsPanel?.isVisible == true)
     }
 
-    private func showPopover() -> Bool {
-        if popover.isShown { return true }
-        guard statusItem.isVisible,
-              let button = statusItem.button, !button.isHiddenOrHasHiddenAncestor,
-              let window = button.window else { return false }
+    private func showNativeMenu() -> Bool {
+        guard statusItem.isVisible, let button = statusItem.button,
+              !button.isHiddenOrHasHiddenAncestor, let window = button.window else { return false }
         let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
-        // Use the live screen list, not a stale window.screen after lid closure.
         guard !anchor.isEmpty,
               NSScreen.screens.contains(where: { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.midY)) })
               else { return false }
-        NSApp.activate(ignoringOtherApps: true)
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        popover.contentViewController?.view.window?.makeKey()
+        controlsPanel?.close()
+        // NSStatusItem owns menu tracking and the selected background. Do not
+        // activate the app or manually draw a pressed state on this path.
+        button.performClick(nil)
         return true
     }
     private func showHelp() {
-        closePopover()
+        closeControls()
         if helpWindow == nil {
             let hosting = NSHostingController(rootView: HelpView(dismiss: { [weak self] in self?.helpWindow?.close() }))
             hosting.sizingOptions = [.preferredContentSize]
@@ -213,7 +150,7 @@ import AgentAwakeCore
         NSApp.activate(ignoringOtherApps: true)
     }
     private func turnOffDisplays() {
-        closePopover()
+        closeControls()
         // Let the menu dismiss and its mouse-up finish before sleeping displays.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.model.turnOffDisplays { [weak self] succeeded in
@@ -229,7 +166,6 @@ import AgentAwakeCore
         return true
     }
     func applicationWillTerminate(_ notification: Notification) {
-        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
         DistributedNotificationCenter.default().removeObserver(self)
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
