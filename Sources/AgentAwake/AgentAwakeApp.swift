@@ -23,6 +23,7 @@ import AgentAwakeCore
     private let model = AppModel()
     private var statusItem: NSStatusItem!
     private var displayedStatusSymbol: String?
+    private var statusItemSelection = false
     private var outsideClickMonitor: Any?
     private let popover = NSPopover()
     private var helpWindow: NSWindow?
@@ -87,13 +88,25 @@ import AgentAwakeCore
             icon?.isTemplate = true
             statusItem?.button?.image = icon
             displayedStatusSymbol = symbol
+            if statusItemSelection { statusItem?.button?.highlight(true) }
         }
         let tooltip = "AgentAwake · \(model.title)"
         if statusItem?.button?.toolTip != tooltip { statusItem?.button?.toolTip = tooltip }
     }
     private func setStatusItemSelected(_ selected: Bool) {
-        let state: NSControl.StateValue = selected ? .on : .off
-        if statusItem?.button?.state != state { statusItem?.button?.state = state }
+        guard statusItemSelection != selected else { return }
+        statusItemSelection = selected
+        statusItem?.button?.state = selected ? .on : .off
+        statusItem?.button?.highlight(selected)
+        if selected {
+            // Native mouse tracking clears its temporary pressed background
+            // after the action returns. Restore it once after that mouse-up,
+            // never on heartbeat refreshes or repeated presentation callbacks.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.statusItemSelection else { return }
+                self.statusItem?.button?.highlight(true)
+            }
+        }
     }
     static func configureMenuWindow(_ window: NSWindow) {
         // Menu-bar managers recognize this native level as an open menu and
