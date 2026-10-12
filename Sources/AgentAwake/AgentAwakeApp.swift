@@ -22,6 +22,7 @@ import AgentAwakeCore
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowDelegate {
     private let model = AppModel()
     private var statusItem: NSStatusItem!
+    private var displayedStatusSymbol: String?
     private let popover = NSPopover()
     private var helpWindow: NSWindow?
     private var controlsPanel: NSPanel?
@@ -61,10 +62,6 @@ import AgentAwakeCore
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
             name: NSApplication.didResignActiveNotification, object: nil)
-        if let window = statusItem.button?.window {
-            NotificationCenter.default.addObserver(self, selector: #selector(closePopover),
-                name: NSWindow.didMoveNotification, object: window)
-        }
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(closePopover),
             name: NSWorkspace.willSleepNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(otherApplicationActivated(_:)),
@@ -77,15 +74,20 @@ import AgentAwakeCore
     }
     private func updateStatusItem() {
         let symbol = model.error != nil ? "exclamationmark.circle" : (model.active ? "bolt.fill" : "bolt")
-        let icon = NSImage(systemSymbolName: symbol, accessibilityDescription: "AgentAwake: \(model.title)")
-        icon?.isTemplate = true
-        statusItem?.button?.image = icon
-        statusItem?.button?.toolTip = "AgentAwake · \(model.title)"
-        setStatusItemSelected(popover.isShown || controlsPanel?.isVisible == true)
+        // Guard heartbeats arrive every second. Replace the image only when
+        // the actual status changes, without repainting an open menu selection.
+        if displayedStatusSymbol != symbol {
+            let icon = NSImage(systemSymbolName: symbol, accessibilityDescription: "AgentAwake")
+            icon?.isTemplate = true
+            statusItem?.button?.image = icon
+            displayedStatusSymbol = symbol
+        }
+        let tooltip = "AgentAwake · \(model.title)"
+        if statusItem?.button?.toolTip != tooltip { statusItem?.button?.toolTip = tooltip }
     }
     private func setStatusItemSelected(_ selected: Bool) {
-        statusItem?.button?.state = selected ? .on : .off
-        statusItem?.button?.highlight(selected)
+        let state: NSControl.StateValue = selected ? .on : .off
+        if statusItem?.button?.state != state { statusItem?.button?.state = state }
     }
     static func configureMenuWindow(_ window: NSWindow) {
         // Menu-bar managers recognize this native level as an open menu and
