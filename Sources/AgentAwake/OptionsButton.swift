@@ -156,21 +156,15 @@ struct OptionsButton: NSViewRepresentable {
             let row = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
             let control: NSControl
             if asSwitch {
-                let toggle = NSSwitch(frame: NSRect(x: 198, y: 2, width: 44, height: 26))
+                let toggle = AwakeSwitch(frame: NSRect(x: 198, y: 2, width: 44, height: 26))
                 toggle.target = self; toggle.action = action
                 toggle.setAccessibilityLabel(title)
                 control = toggle
                 row.addSubview(toggle)
                 let label = NSTextField(labelWithString: title)
-                label.frame = NSRect(x: 14, y: 6, width: 124, height: 20)
+                label.frame = NSRect(x: 14, y: 6, width: 170, height: 20)
                 label.font = .systemFont(ofSize: 13, weight: .semibold)
                 row.addSubview(label)
-                let stateLabel = NSTextField(labelWithString: "Off")
-                stateLabel.identifier = NSUserInterfaceItemIdentifier("awakeState")
-                stateLabel.frame = NSRect(x: 138, y: 6, width: 54, height: 20)
-                stateLabel.alignment = .right
-                stateLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-                row.addSubview(stateLabel)
             } else {
                 let button = NSButton(checkboxWithTitle: title, target: self, action: action)
                 if radio { button.setButtonType(.radio) }
@@ -195,18 +189,14 @@ struct OptionsButton: NSViewRepresentable {
                 }
                 let state: NSControl.StateValue = checked ? .on : .off
                 if entry.state != state { entry.state = state }
-                if let toggle = control as? NSSwitch, toggle.state != state { toggle.state = state }
-                if let button = control as? NSButton, button.state != state { button.state = state }
+                
+                if let button = control as? NSButton, button.state != state {
+                    button.state = state
+                    button.needsDisplay = true
+                }
                 let isAwake: Bool
                 if case .awake = kind { isAwake = true } else { isAwake = false }
-                if isAwake, let label = entry.view?.subviews.first(where: {
-                    $0.identifier == NSUserInterfaceItemIdentifier("awakeState")
-                }) as? NSTextField {
-                    let text = checked ? "On" : "Off"
-                    if label.stringValue != text { label.stringValue = text }
-                    label.textColor = checked ? .systemGreen : .secondaryLabelColor
-                    control.setAccessibilityValue(text)
-                }
+                if isAwake { control.setAccessibilityValue(checked ? "On" : "Off") }
                 let enabled = !(isAwake && !model.enabled && !model.isReady && !model.canRetry)
                 if control.isEnabled != enabled { control.isEnabled = enabled }
             }
@@ -228,6 +218,30 @@ struct OptionsButton: NSViewRepresentable {
         }
         @objc private func help() { parent.showHelp() }
         @objc private func quitApp() { NSApp.terminate(nil) }
+    }
+
+    // Use native button tracking and keyboard actions, with an explicit filled
+    // track so the selected state remains clear inside a custom menu item.
+    @MainActor final class AwakeSwitch: NSButton {
+        override init(frame frameRect: NSRect) {
+            super.init(frame: frameRect)
+            setButtonType(.toggle)
+            title = ""
+            isBordered = false
+            focusRingType = .exterior
+            setAccessibilityRole(.checkBox)
+        }
+        required init?(coder: NSCoder) { super.init(coder: coder) }
+        override func draw(_ dirtyRect: NSRect) {
+            let track = NSRect(x: 0, y: 2, width: bounds.width, height: bounds.height - 4)
+            let color: NSColor = state == .on ? .systemBlue : NSColor(calibratedWhite: 0.38, alpha: 1)
+            color.withAlphaComponent(isEnabled ? 1 : 0.4).setFill()
+            NSBezierPath(roundedRect: track, xRadius: track.height / 2, yRadius: track.height / 2).fill()
+            let diameter = track.height - 4
+            let x = state == .on ? track.maxX - diameter - 2 : track.minX + 2
+            NSColor.white.withAlphaComponent(isEnabled ? 1 : 0.6).setFill()
+            NSBezierPath(ovalIn: NSRect(x: x, y: track.minY + 2, width: diameter, height: diameter)).fill()
+        }
     }
 
     // Keep the native menu-button accessibility and keyboard behavior, while
