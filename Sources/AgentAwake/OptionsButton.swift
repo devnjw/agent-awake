@@ -34,6 +34,9 @@ struct OptionsButton: NSViewRepresentable {
     @MainActor final class Coordinator: NSObject, NSMenuDelegate {
         var parent: OptionsButton
         private var tracking = false
+        private var statusMenu: NSMenu?
+        private enum Setting { case awake, power, login, duration(Int) }
+        private var settings: [(Setting, NSControl, NSMenuItem)] = []
 
         init(_ parent: OptionsButton) { self.parent = parent }
 
@@ -60,7 +63,8 @@ struct OptionsButton: NSViewRepresentable {
         func menuNeedsUpdate(_ menu: NSMenu) {
             guard !tracking else { return }
             menu.removeAllItems()
-            populate(menu)
+            if menu === statusMenu { populateStatusMenu(menu) }
+            else { populate(menu) }
         }
 
         func menuWillOpen(_ menu: NSMenu) { tracking = true }
@@ -74,7 +78,30 @@ struct OptionsButton: NSViewRepresentable {
             return menu
         }
 
-        private func populate(_ menu: NSMenu) {
+        func makeStatusMenu() -> NSMenu {
+            let menu = NSMenu(title: "AgentAwake")
+            menu.autoenablesItems = false
+            menu.delegate = self
+            statusMenu = menu
+            populateStatusMenu(menu)
+            return menu
+        }
+
+        private func populateStatusMenu(_ menu: NSMenu) {
+            settings.removeAll()
+            menu.addItem(settingItem("Keep awake", #selector(toggleAwake(_:)), kind: .awake, asSwitch: true))
+            menu.addItem(.separator())
+            populate(menu, persistent: true)
+            refreshSettings()
+        }
+
+        @objc private func toggleAwake(_ sender: NSControl) {
+            if parent.model.enabled { parent.model.stop() }
+            else { parent.model.start() }
+            refreshSettings()
+        }
+
+        private func populate(_ menu: NSMenu, persistent: Bool = false) {
             let model = parent.model
             // Pull-down buttons display the first item on the button, and hide
             // it from the open menu. Keep the icon out of the command list.
@@ -84,12 +111,17 @@ struct OptionsButton: NSViewRepresentable {
             menu.addItem(label)
             menu.addItem(item("Turn off displays", #selector(sleepDisplays)))
             menu.addItem(.separator())
-            menu.addItem(item("Only when plugged in", #selector(changePower), checked: model.powerMode == .pluggedInOnly))
+            menu.addItem(persistent
+                ? settingItem("Only when plugged in", #selector(changePower(_:)), kind: .power)
+                : item("Only when plugged in", #selector(changePower(_:)), checked: model.powerMode == .pluggedInOnly))
             menu.addItem(.separator())
             menu.addItem(.sectionHeader(title: "Stop after"))
             for (title, seconds) in [("Until stopped", 0), ("1 hour", 3600), ("2 hours", 7200), ("4 hours", 14400), ("8 hours", 28800)] {
-                let option = item(title, #selector(changeDuration(_:)), checked: model.duration == seconds)
+                let option = persistent
+                    ? settingItem(title, #selector(changeDuration(_:)), kind: .duration(seconds), radio: true)
+                    : item(title, #selector(changeDuration(_:)), checked: model.duration == seconds)
                 option.tag = seconds
+                (option.view?.subviews.first as? NSControl)?.tag = seconds
                 menu.addItem(option)
             }
             if model.enabled && model.duration > 0 {
@@ -98,7 +130,9 @@ struct OptionsButton: NSViewRepresentable {
                 menu.addItem(remaining)
             }
             menu.addItem(.separator())
-            menu.addItem(item("Launch at login", #selector(changeLogin), checked: model.launchAtLogin))
+            menu.addItem(persistent
+                ? settingItem("Launch at login", #selector(changeLogin(_:)), kind: .login)
+                : item("Launch at login", #selector(changeLogin(_:)), checked: model.launchAtLogin))
             menu.addItem(.separator())
             menu.addItem(item("About & help", #selector(help)))
             let quit = item("Quit AgentAwake", #selector(quitApp))
@@ -114,14 +148,100 @@ struct OptionsButton: NSViewRepresentable {
             return item
         }
 
-        @objc private func sleepDisplays() { parent.turnOffDisplays() }
-        @objc private func changePower() {
-            parent.model.setPowerMode(parent.model.powerMode == .pluggedInOnly ? .anyPower : .pluggedInOnly)
+        private func settingItem(_ title: String, _ action: Selector, kind: Setting,
+                                 asSwitch: Bool = false, radio: Bool = false) -> NSMenuItem {
+            // A custom item view dispatches control actions directly, without
+            // selecting a command and dismissing the native menu tracking loop.
+            let entry = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            let row = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 30))
+            let control: NSControl
+            if asSwitch {
+                let toggle = AwakeSwitch(frame: NSRect(x: 198, y: 2, width: 44, height: 26))
+                toggle.target = self; toggle.action = action
+                toggle.setAccessibilityLabel(title)
+                control = toggle
+                row.addSubview(toggle)
+                let label = NSTextField(labelWithString: title)
+                label.frame = NSRect(x: 14, y: 6, width: 170, height: 20)
+                label.font = .systemFont(ofSize: 13, weight: .semibold)
+                row.addSubview(label)
+            } else {
+                let button = NSButton(checkboxWithTitle: title, target: self, action: action)
+                if radio { button.setButtonType(.radio) }
+                button.frame = NSRect(x: 14, y: 4, width: 232, height: 22)
+                control = button
+                row.addSubview(button)
+            }
+            entry.view = row
+            settings.append((kind, control, entry))
+            return entry
         }
-        @objc private func changeDuration(_ item: NSMenuItem) { parent.model.setDuration(item.tag) }
-        @objc private func changeLogin() { parent.model.setLogin(!parent.model.launchAtLogin) }
+
+        func refreshSettings() {
+            let model = parent.model
+            for (kind, control, entry) in settings {
+                let checked: Bool
+                switch kind {
+                case .awake: checked = model.enabled
+                case .power: checked = model.powerMode == .pluggedInOnly
+                case .login: checked = model.launchAtLogin
+                case .duration(let seconds): checked = model.duration == seconds
+                }
+                let state: NSControl.StateValue = checked ? .on : .off
+                if entry.state != state { entry.state = state }
+                
+                if let button = control as? NSButton, button.state != state {
+                    button.state = state
+                    button.needsDisplay = true
+                }
+                let isAwake: Bool
+                if case .awake = kind { isAwake = true } else { isAwake = false }
+                if isAwake { control.setAccessibilityValue(checked ? "On" : "Off") }
+                let enabled = !(isAwake && !model.enabled && !model.isReady && !model.canRetry)
+                if control.isEnabled != enabled { control.isEnabled = enabled }
+            }
+        }
+
+        @objc private func sleepDisplays() { parent.turnOffDisplays() }
+        @objc private func changePower(_ sender: Any?) {
+            parent.model.setPowerMode(parent.model.powerMode == .pluggedInOnly ? .anyPower : .pluggedInOnly)
+            refreshSettings()
+        }
+        @objc private func changeDuration(_ sender: Any) {
+            let seconds = (sender as? NSControl)?.tag ?? (sender as? NSMenuItem)?.tag ?? 0
+            parent.model.setDuration(seconds)
+            refreshSettings()
+        }
+        @objc private func changeLogin(_ sender: Any?) {
+            parent.model.setLogin(!parent.model.launchAtLogin)
+            refreshSettings()
+        }
         @objc private func help() { parent.showHelp() }
         @objc private func quitApp() { NSApp.terminate(nil) }
+    }
+
+    // Use native button tracking and keyboard actions, with an explicit filled
+    // track so the selected state remains clear inside a custom menu item.
+    @MainActor final class AwakeSwitch: NSButton {
+        override init(frame frameRect: NSRect) {
+            super.init(frame: frameRect)
+            setButtonType(.toggle)
+            title = ""
+            isBordered = false
+            focusRingType = .exterior
+            setAccessibilityRole(.checkBox)
+        }
+        required init?(coder: NSCoder) { super.init(coder: coder) }
+        override func draw(_ dirtyRect: NSRect) {
+            let track = NSRect(x: 0, y: 2, width: bounds.width, height: bounds.height - 4)
+            let color: NSColor = state == .on ? .systemBlue : NSColor(calibratedWhite: 0.38, alpha: 1)
+            color.withAlphaComponent(isEnabled ? 1 : 0.4).setFill()
+            NSBezierPath(roundedRect: track, xRadius: track.height / 2, yRadius: track.height / 2).fill()
+            let diameter = track.height - 4
+            let x = state == .on ? track.maxX - diameter - 2 : track.minX + 2
+            NSColor.white.withAlphaComponent(isEnabled ? 1 : 0.6).setFill()
+            NSBezierPath(ovalIn: NSRect(x: x, y: track.minY + 2, width: diameter, height: diameter)).fill()
+        }
     }
 
     // Keep the native menu-button accessibility and keyboard behavior, while

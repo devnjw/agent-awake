@@ -14,7 +14,7 @@ macOS 14+ · Apple Silicon (M-series)
 
 Closing the lid dims the built-in screen while Keep awake is active. Opening it restores brightness; external screens are unchanged.
 
-## Options · ⋯
+## Options · ⚡ menu
 
 | Option | What it does |
 | --- | --- |
